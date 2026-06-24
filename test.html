@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouBike 智慧路線查詢</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0f1f3d;
+  --navy-mid: #1a3260;
+  --orange: #f5a623;
+  --orange-dim: rgba(245,166,35,0.14);
+  --white: #fff;
+  --off-white: #f5f7fb;
+  --tp: #0f1f3d;
+  --ts: #556080;
+  --tm: #8d9ab5;
+  --border: #dde3f0;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --sh: 0 2px 8px rgba(15,31,61,0.06);
+  --shm: 0 8px 28px rgba(15,31,61,0.1);
+  --r: 14px; /* 稍微加大圓角更現代 */
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: 'Inter','Noto Sans TC',sans-serif;
+  background: var(--navy);
+  color: var(--tp);
+  overflow: hidden; 
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════
+    DESKTOP PANEL LEFT — 優化為精緻側欄
+═══════════════════════════════════ */
+.panel-left {
+  width: 320px; /* 縮小寬度，釋放空間給核心操作區 */
+  flex-shrink: 0;
+  background: linear-gradient(160deg, #0a1628 0%, #102255 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* 讓頂部跟底部更有空間感 */
+  padding: 40px 32px;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.panel-left::before {
+  content: '';
+  position: absolute; right: -60px; top: -60px;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--orange); display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: var(--navy);
+  box-shadow: 0 4px 14px rgba(245,166,35,0.4);
+}
+.logo-text { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -.3px; }
+
+.panel-hero {
+  margin: 40px 0;
+}
+.panel-hero h1 {
+  font-size: 28px; font-weight: 800; color: #fff;
+  line-height: 1.3; letter-spacing: -.6px;
+}
+.panel-hero h1 em { color: var(--orange); font-style: normal; }
+.panel-hero p {
+  font-size: 13.5px; color: rgba(255,255,255,.5);
+  margin-top: 14px; line-height: 1.6;
+}
+.live-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.2);
+  border-radius: 20px; padding: 4px 12px; margin-top: 20px;
+  font-size: 10px; font-weight: 700; color: var(--success);
+  letter-spacing: .5px;
+}
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 1.5s infinite; }
+
+.panel-feats { display: flex; flex-direction: column; gap: 16px; margin-top: auto;}
+.feat { display: flex; align-items: flex-start; gap: 12px; }
+.feat-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.feat-text { font-size: 12px; color: rgba(255,255,255,.45); line-height: 1.5; }
+.feat-text b { color: rgba(255,255,255,.85); font-weight: 600; margin-bottom: 2px; }
+
+/* ═══════════════════════════════════
+    DESKTOP PANEL RIGHT — 寬敞的大畫布
+═══════════════════════════════════ */
+.panel-right {
+  flex: 1;
+  background: var(--off-white);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topbar {
+  height: 64px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 40px; flex-shrink: 0;
+}
+
+/* ✨ 關鍵bug修復點：align-items 改為 flex-start 讓右頁元件永遠置頂，不跟著垂直置中 ✨ */
+.form-area {
+  flex: 1;
+  display: flex;
+  align-items: flex-start; 
+  justify-content: center;
+  padding: 54px 40px 40px 40px; /* 稍微加高頂部內邊距，完美切齊左邊 Logo 高度 */
+  overflow-y: auto; /* 防止小螢幕筆電高度不夠時被裁切 */
+}
+.form-inner {
+  width: 100%;
+  max-width: 800px; /* 從 500px 放大到 800px，讓版面舒展開來 */
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.form-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+.form-title { font-size: 22px; font-weight: 700; color: var(--tp); letter-spacing: -.4px; }
+.form-sub   { font-size: 13px; color: var(--tm); margin-top: 4px; }
+
+/* 核心優化：改為左右雙欄 grid 佈局，不再硬擠一排 */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.grid-left, .grid-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sec-label {
+  font-size: 11px; font-weight: 700; color: var(--tm);
+  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;
+}
+
+/* 路線輸入框寬度調整 */
+.route-wrap { position: relative; }
+.route-inputs { display: flex; flex-direction: column; box-shadow: var(--sh); border-radius: var(--r); overflow: hidden;}
+.input-row {
+  display: flex; align-items: center; gap: 12px;
+  border: 1.5px solid var(--border); background: #fff; padding: 0 16px;
+  transition: all .18s;
+}
+.input-row:first-child { border-radius: var(--r) var(--r) 0 0; border-bottom: none; }
+.input-row:last-child  { border-radius: 0 0 var(--r) var(--r); }
+.input-row:focus-within {
+  border-color: var(--orange); background: #fff;
+  box-shadow: 0 0 0 3px rgba(245,166,35,.11); z-index: 1; position: relative;
+}
+.input-row input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 14px; font-family: inherit; color: var(--tp);
+  padding: 14px 0; font-weight: 500;
+}
+.swap-btn {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: #fff;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--ts); box-shadow: var(--sh); transition: all .18s; z-index: 2;
+}
+
+/* 步行與人數 */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fc {
+  border: 1.5px solid var(--border); border-radius: var(--r);
+  padding: 12px 16px; background: #fff; transition: all .18s; box-shadow: var(--sh);
+}
+.fc:focus-within { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(245,166,35,.11); }
+.fc label {
+  display: block; font-size: 10px; font-weight: 700; color: var(--tm);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px;
+}
+.fc-row { display: flex; align-items: center; gap: 8px; }
+.fc input[type="number"] {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 22px; font-weight: 700; color: var(--tp); font-family: inherit; min-width: 0;
+}
+.fc-unit { font-size: 12px; color: var(--tm); }
+
+/* 篩選卡片優化 */
+.filters { border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; background: #fff; box-shadow: var(--sh); }
+.fh {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; background: var(--off-white);
+  cursor: pointer; user-select: none; border-bottom: 1.5px solid transparent; transition: all .18s;
+}
+.fh.open { border-bottom-color: var(--border); background: #fff; }
+.fh-l { display: flex; align-items: center; gap: 12px; }
+.fh-icon {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: var(--orange-dim); border: 1px solid rgba(245,166,35,.25);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.fh-t { font-size: 13px; font-weight: 600; color: var(--tp); }
+.fh-s { font-size: 11px; color: var(--tm); margin-top: 2px; }
+.fb { display: none; padding: 16px; flex-direction: column; gap: 14px; }
+.fb.open { display: flex; }
+.fr { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.fn { font-size: 13px; font-weight: 600; color: var(--tp); }
+.fd { font-size: 11px; color: var(--tm); margin-top: 4px; line-height: 1.5; }
+.fbadge {
+  display: inline-block; margin-top: 6px;
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 12px;
+}
+
+/* ═══════════════════════════════════
+    TOGGLE SWITCH BUGFIX
+═══════════════════════════════════ */
+.toggle { 
+  position: relative; 
+  width: 40px; 
+  height: 22px; 
+  flex-shrink: 0; 
+  display: inline-block;
+}
+/* 完美隱藏原生 checkbox 且保留點擊功能 */
+.toggle input { 
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+/* 橘色背景軌道基礎樣式 */
+.tt { 
+  position: absolute; 
+  inset: 0; 
+  border-radius: 22px; 
+  background: var(--border); 
+  cursor: pointer; 
+  transition: background-color .2s;
+}
+.toggle input:checked + .tt { 
+  background: var(--orange); 
+}
+/* 白色圓鈕基礎樣式 */
+.th { 
+  position: absolute; 
+  width: 16px; 
+  height: 16px; 
+  border-radius: 50%; 
+  background: #fff; 
+  top: 3px; 
+  left: 3px; 
+  box-shadow: 0 1px 3px rgba(0,0,0,.18); 
+  transition: transform .2s; 
+  pointer-events: none;
+}
+/* 選取時白色圓鈕精準向右平移，不再爆版 */
+.toggle input:checked ~ .th { 
+  transform: translateX(18px); 
+}
+
+/* 底部按鈕整行拉寬氣勢足 */
+.bottom-area {
+  grid-column: span 2; /* 橫跨兩欄 */
+  margin-top: 8px;
+}
+.btn-search {
+  width: 100%; padding: 16px; border: none; border-radius: var(--r);
+  background: linear-gradient(135deg, var(--orange) 0%, #e0891a 100%);
+  color: var(--navy); font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(245,166,35,0.25); transition: all .18s;
+}
+.btn-search:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,166,35,0.35); }
+
+/* 其他元件保持不變... */
+.btn-google { display: flex; align-items: center; gap: 7px; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 13px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: #3c4043; font-family: inherit; box-shadow: var(--sh); transition: all .18s; }
+.ubadge { display: none; align-items: center; gap: 7px; background: var(--off-white); border: 1.5px solid var(--border); border-radius: 22px; padding: 3px 12px 3px 3px; cursor: pointer; }
+.ubadge.on { display: flex; }
+.uav { width: 26px; height: 26px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--navy); }
+.uname { font-size: 12px; font-weight: 500; color: var(--tp); }
+.overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(8,16,32,.72); backdrop-filter: blur(6px); align-items: center; justify-content: center; padding: 20px; }
+.overlay.on { display: flex; }
+.modal { background: #fff; border-radius: 18px; width: 100%; max-width: 380px; box-shadow: 0 24px 64px rgba(0,0,0,.28); overflow: hidden; animation: mIn .28s cubic-bezier(.16,1,.3,1) both; }
+@keyframes mIn { from{opacity:0;transform:scale(.93) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-top { background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%); padding: 26px 26px 20px; text-align: center; position: relative; }
+.mcls { position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(255,255,255,.1); color: rgba(255,255,255,.55); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all .14s; }
+.mlogo { width: 46px; height: 46px; border-radius: 50%; background: var(--orange); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 800; color: var(--navy); box-shadow: 0 4px 14px rgba(245,166,35,.38); }
+.modal-top h2 { font-size: 17px; font-weight: 700; color: #fff; }
+.modal-top p  { font-size: 12px; color: rgba(255,255,255,.48); margin-top: 3px; }
+.modal-body { padding: 22px 24px 26px; }
+.gbtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 11px; background: #fff; border: 1.5px solid #dadce0; border-radius: 9px; padding: 12px 18px; cursor: pointer; font-size: 13.5px; font-weight: 600; font-family: inherit; color: #3c4043; box-shadow: var(--sh); transition: all .18s; }
+.mdiv { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.mdiv span { font-size: 10px; color: var(--tm); white-space: nowrap; }
+.mdiv::before,.mdiv::after { content:''; flex:1; height:1px; background:var(--border); }
+.mben { display: flex; flex-direction: column; gap: 9px; }
+.ben-row { display: flex; align-items: center; gap: 9px; }
+.ben-ico { width: 26px; height: 26px; border-radius: 7px; background: var(--off-white); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.ben-txt { font-size: 12.5px; color: var(--ts); }
+.ben-txt b { color: var(--tp); font-weight: 600; margin-bottom: 2px; }
+.mnote { font-size: 10px; color: var(--tm); text-align: center; margin-top: 16px; line-height: 1.6; }
+.mnote a { color: var(--orange); text-decoration: none; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--navy); color: #fff; border-radius: 22px; padding: 10px 20px; font-size: 12.5px; font-weight: 500; box-shadow: 0 8px 28px rgba(0,0,0,.22); z-index: 300; display: flex; align-items: center; gap: 7px; transition: transform .32s cubic-bezier(.16,1,.3,1), opacity .32s; opacity: 0; white-space: nowrap; }
+.toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+.tdot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.fdiv { height: 1px; background: var(--border); }
+.thr-row { padding: 0 0 0 40px; display: flex; align-items: center; gap: 8px; }
+.thr-row span { font-size: 11px; color: var(--tm); }
+.thr-ctrl { display: flex; align-items: center; gap: 5px; }
+.thr-v { font-size: 13px; font-weight: 700; color: var(--tp); min-width: 20px; text-align: center; }
+.tb { width: 24px; height: 24px; border: 1.5px solid var(--border); border-radius: 5px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--ts); transition: all .14s; }
+.tb:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+.sb { width: 24px; height: 19px; border: 1.5px solid var(--border); border-radius: 5px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--ts); transition: all .14s; line-height: 1; }
+.sb:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+.stepper { display: flex; flex-direction: column; gap: 2px; margin-left: auto; }
+.bd { background: rgba(239,68,68,.1); color: var(--danger); }
+.bw { background: rgba(245,158,11,.1); color: var(--warning); }
+
+/* ═══════════════════════════════════
+    MOBILE RESPONSIVE
+═══════════════════════════════════ */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow: auto; }
+  body { overflow-x: hidden; }
+  .app { flex-direction: column; height: auto; overflow: visible; min-height: 100vh; }
+  .panel-left { display: none; }
+  .panel-right { flex: none; overflow: visible; min-height: 100vh; }
+  .topbar { position: sticky; top: 0; z-index: 50; height: 52px; padding: 0 16px; background: rgba(15,31,61,.94); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(245,166,35,.14); justify-content: space-between; }
+  .topbar-logo { display: flex; align-items: center; gap: 8px; }
+  .topbar-logo-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: var(--navy); }
+  .topbar-logo-text { font-size: 15px; font-weight: 700; color: #fff; }
+  .btn-google { background: transparent; border-color: rgba(255,255,255,.2); color: #fff; font-size: 12px; padding: 5px 10px; }
+  .ubadge { background: transparent; border-color: rgba(255,255,255,.2); }
+  .uname { color: #fff; }
+  .mobile-hero { display: block; background: linear-gradient(135deg, #0a1628 0%, #102255 100%); padding: 22px 18px 20px; position: relative; overflow: hidden; }
+  .mobile-hero::after { content: ''; position: absolute; right: -24px; top: -24px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(245,166,35,.2) 0%, transparent 70%); pointer-events: none; }
+  .mobile-hero h2 { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -.4px; }
+  .mobile-hero h2 em { color: var(--orange); font-style: normal; }
+  .mobile-hero p  { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 4px; }
+  
+  /* 手機版還原為單欄 */
+  .form-area { display: block; padding: 18px 16px 32px; overflow: visible; }
+  .form-inner { max-width: 100%; gap: 16px; }
+  .form-title, .form-sub { display: none; }
+  .main-grid { grid-template-columns: 1fr; gap: 16px; }
+  .bottom-area { grid-column: span 1; }
+  .input-row input { padding: 13px 0; font-size: 14px; }
+  .fc input[type="number"] { font-size: 22px; }
+  .btn-search { padding: 14px; font-size: 15px; }
+}
+
+.mobile-hero { display: none; }
+.topbar-logo { display: none; }
+@media (max-width: 768px) {
+  .topbar-logo { display: flex; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="panel-left">
+    <div>
+      <div class="logo">
+        <div class="logo-dot">Y</div>
+        <div class="logo-text">YouBike 智慧導航</div>
+      </div>
+      <div class="panel-hero">
+        <h1>找到<em>最佳</em><br>共享單車路線</h1>
+        <p>整合即時車位與地形高程資料，聰明避開空站與陡坡。</p>
+        <div class="live-chip"><div class="live-dot"></div>即時資料同步中</div>
+      </div>
+    </div>
+    
+    <div class="panel-feats">
+      <div class="feat"><div class="feat-icon">⚡</div><div class="feat-text"><b>即時預測・避免撲空</b>排除低可借量與高滿位率站點</div></div>
+      <div class="feat"><div class="feat-icon">🚴</div><div class="feat-text"><b>地形坡度避讓</b>自動規劃最省力的平坦路線</div></div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+
+    <div class="topbar">
+      <div class="topbar-logo">
+        <div class="topbar-logo-dot">Y</div>
+        <div class="topbar-logo-text">YouBike 智慧路線</div>
+      </div>
+      <div>
+        <button class="btn-google" id="loginBtn" onclick="openModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google 帳號登入
+        </button>
+        <div class="ubadge" id="ubadge">
+          <div class="uav" id="uav">U</div>
+          <span class="uname" id="uname">使用者</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-hero">
+      <h2>智慧 <em>YouBike</em> 路線規劃</h2>
+      <p>即時車位分析・自動推薦最佳站點</p>
+    </div>
+
+    <div class="form-area">
+      <div class="form-inner">
+        <div class="form-header">
+          <div class="form-title">路徑設定與偏好</div>
+          <div class="form-sub">輸入起終點，系統將為您量身打造最佳通勤路徑</div>
+        </div>
+
+        <div class="main-grid">
+          
+          <div class="grid-left">
+            <div>
+              <div class="sec-label">起訖點設定</div>
+              <div class="route-wrap">
+                <div class="route-inputs">
+                  <div class="input-row">
+                    <svg class="iico s" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/></svg>
+                    <input type="text" id="startIn" placeholder="請輸入出發地、捷運站或地標..." autocomplete="off">
+                  </div>
+                  <div class="input-row">
+                    <svg class="iico e" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    <input type="text" id="endIn" placeholder="請輸入目的地..." autocomplete="off">
+                  </div>
+                </div>
+                <button class="swap-btn" onclick="swap()" title="交換起終點">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="two-col">
+              <div class="fc">
+                <label>可步行極限</label>
+                <div class="fc-row">
+                  <input type="number" id="walkIn" value="10" min="1" max="60">
+                  <span class="fc-unit">分鐘</span>
+                  <div class="stepper">
+                    <button class="sb" onclick="adj('walkIn',1)">▲</button>
+                    <button class="sb" onclick="adj('walkIn',-1)">▼</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fc">
+                <label>同行人數</label>
+                <div class="fc-row">
+                  <input type="number" id="persIn" value="1" min="1" max="20">
+                  <span class="fc-unit">人</span>
+                  <div class="stepper">
+                    <button class="sb" onclick="adj('persIn',1)">▲</button>
+                    <button class="sb" onclick="adj('persIn',-1)">▼</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-right">
+            <div>
+              <div class="sec-label">智慧過濾機制</div>
+              <div class="filters">
+                <div class="fh open" id="fh" onclick="toggleF()">
+                  <div class="fh-l">
+                    <div class="fh-icon">⚡</div>
+                    <div>
+                      <div class="fh-t">動態車位預測系統</div>
+                      <div class="fh-s">根據即時大數據排除高機率鋪空站點</div>
+                    </div>
+                  </div>
+                  <svg class="chev open" id="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="fb open" id="fb">
+                  <div class="fr">
+                    <div class="fi">
+                      <div class="fn">起點保障：排除無車可借站</div>
+                      <div class="fd">自動過濾車輛數 &lt; <b id="minL">3</b> 台的站點，確保全員皆有車可騎。</div>
+                      <span class="fbadge bd">安全防線</span>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><div class="tt"></div><div class="th"></div></label>
+                  </div>
+                  <div class="thr-row">
+                    <span>容許最低車輛</span>
+                    <div class="thr-ctrl">
+                      <button class="tb" onclick="adjT('min',-1)">−</button>
+                      <span class="thr-v" id="minV">3</span>
+                      <button class="tb" onclick="adjT('min',1)">＋</button>
+                    </div>
+                    <span>台</span>
+                  </div>
+                  <div class="fdiv"></div>
+                  <div class="fr">
+                    <div class="fi">
+                      <div class="fn">終點保障：排除滿位風險</div>
+                      <div class="fd">自動過濾滿位率 &gt; <b id="maxL">80</b>% 的站點，改推周邊有空位站點。</div>
+                      <span class="fbadge bw">還車無憂</span>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><div class="tt"></div><div class="th"></div></label>
+                  </div>
+                  <div class="thr-row">
+                    <span>最大滿位臨界</span>
+                    <div class="thr-ctrl">
+                      <button class="tb" onclick="adjT('max',-5)">−</button>
+                      <span class="thr-v" id="maxV">80</span>
+                      <button class="tb" onclick="adjT('max',5)">＋</button>
+                    </div>
+                    <span>%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-area">
+            <button class="btn-search" id="searchBtn" onclick="doSearch()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              即時規劃最佳智慧路線
+            </button>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeOuter(event)">
+  <div class="modal">
+    <div class="modal-top">
+      <button class="mcls" onclick="closeModal()">✕</button>
+      <div class="mlogo">Y</div>
+      <h2>登入 YouBike 智慧路線</h2>
+      <p>儲存常用路線・取得個人化推薦</p>
+    </div>
+    <div class="modal-body">
+      <button class="gbtn" onclick="doLogin()">
+        <svg width="19" height="19" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        以 Google 帳號繼續
+      </button>
+      <div class="mdiv"><span>登入後享有</span></div>
+      <div class="mben">
+        <div class="ben-row"><div class="ben-ico">⭐</div><div class="ben-txt"><b>儲存常用起終點</b>，一鍵重複搜尋</div></div>
+        <div class="ben-row"><div class="ben-ico">📊</div><div class="ben-txt"><b>騎乘歷史紀錄</b>與碳排放統計</div></div>
+        <div class="ben-row"><div class="ben-ico">🔔</div><div class="ben-txt"><b>車位到站通知</b>，即時推播提醒</div></div>
+      </div>
+      <p class="mnote">繼續即代表同意我們的 <a href="#">服務條款</a> 與 <a href="#">隱私政策</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot"></div><span id="tmsg"></span></div>
+
+<script>
+let minV = 3, maxV = 80;
+
+function adj(id, d) {
+  const el = document.getElementById(id);
+  el.value = Math.max(+el.min||1, Math.min(+el.max||999, (+el.value||0)+d));
+}
+
+function adjT(k, d) {
+  if (k==='min') {
+    minV = Math.max(1, Math.min(20, minV+d));
+    document.getElementById('minV').textContent = minV;
+    document.getElementById('minL').textContent = minV;
+  } else {
+    maxV = Math.max(10, Math.min(100, maxV+d));
+    document.getElementById('maxV').textContent = maxV;
+    document.getElementById('maxL').textContent = maxV;
+  }
+}
+
+function swap() {
+  const s = document.getElementById('startIn'), e = document.getElementById('endIn');
+  [s.value, e.value] = [e.value, s.value];
+}
+
+function toggleF() {
+  document.getElementById('fb').classList.toggle('open');
+  document.getElementById('fh').classList.toggle('open');
+  document.getElementById('chev').classList.toggle('open');
+}
+
+function doSearch() {
+  const s = document.getElementById('startIn').value.trim();
+  const e = document.getElementById('endIn').value.trim();
+  if (!s||!e) { showToast('⚠️ 請輸入起點與終點','#f59e0b'); return; }
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> 智慧分析路徑中…`;
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> 即時規劃最佳智慧路線`;
+    showToast('✅ 已為您量身篩選出 3 條黃金單車路線');
+  }, 1800);
+}
+
+function showToast(msg, col) {
+  const t = document.getElementById('toast');
+  t.querySelector('.tdot').style.background = col||'#22c55e';
+  document.getElementById('tmsg').textContent = msg;
+  t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'), 3000);
+}
+
+function openModal()  { document.getElementById('overlay').classList.add('on'); }
+function closeModal() { document.getElementById('overlay').classList.remove('on'); }
+function closeOuter(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
+
+function doLogin() {
+  closeModal();
+  setTimeout(()=>{
+    document.getElementById('loginBtn').style.display='none';
+    document.getElementById('ubadge').classList.add('on');
+    document.getElementById('uname').textContent='王小明';
+    document.getElementById('uav').textContent='王';
+    showToast('✅ 已成功連動 Google 帳號資料');
+  }, 350);
+}
+
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
+</script>
+</body>
+</html>
