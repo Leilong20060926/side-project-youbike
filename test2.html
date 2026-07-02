@@ -1,1 +1,1415 @@
-//test2
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouBike 智慧路線查詢</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════
+    THEME CHANGER & VARIABLE BASES
+═══════════════════════════════════ */
+:root {
+  --navy: #0f1f3d;
+  --navy-mid: #1a3260;
+  --orange: #f5a623;
+  --orange-dim: rgba(245,166,35,0.14);
+  --white: #fff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+  --purple-dim: rgba(139, 92, 246, 0.14);
+  --r: 14px;
+
+  /* 日間模式變數 (預設) */
+  --bg-app: #f5f7fb;
+  --bg-card: #fff;
+  --bg-topbar: rgba(255, 255, 255, 0.8);
+  --bg-header: #f5f7fb;
+  --tp: #0f1f3d;
+  --ts: #556080;
+  --tm: #8d9ab5;
+  --border: #dde3f0;
+  --sh: 0 2px 8px rgba(15,31,61,0.06);
+  --shm: 0 8px 28px rgba(15,31,61,0.1);
+}
+
+/* 夜間模式色彩覆蓋 */
+[data-theme="dark"] {
+  --bg-app: #0b132b;
+  --bg-card: #1c2541;
+  --bg-topbar: rgba(28, 37, 65, 0.8);
+  --bg-header: #111a36;
+  --tp: #f5f7fb;
+  --ts: #9faecb;
+  --tm: #6f7d9c;
+  --border: #2a3759;
+  --sh: 0 4px 12px rgba(0,0,0,0.2);
+  --shm: 0 12px 36px rgba(0,0,0,0.3);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: 'Inter','Noto Sans TC',sans-serif;
+  background: var(--navy);
+  color: var(--tp);
+  overflow: hidden; 
+  transition: color .3s, background-color .3s;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════
+    DESKTOP PANEL LEFT
+═══════════════════════════════════ */
+.panel-left {
+  width: 320px;
+  flex-shrink: 0;
+  background: linear-gradient(160deg, #0a1628 0%, #102255 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 32px;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.panel-left::before {
+  content: '';
+  position: absolute; right: -60px; top: -60px;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--orange); display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: var(--navy);
+  box-shadow: 0 4px 14px rgba(245,166,35,0.4);
+}
+.logo-text { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -.3px; }
+
+.panel-hero { margin: 40px 0; }
+.panel-hero h1 {
+  font-size: 28px; font-weight: 800; color: #fff;
+  line-height: 1.3; letter-spacing: -.6px;
+}
+.panel-hero h1 em { color: var(--orange); font-style: normal; }
+.panel-hero p {
+  font-size: 13.5px; color: rgba(255,255,255,.5);
+  margin-top: 14px; line-height: 1.6;
+}
+.live-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.2);
+  border-radius: 20px; padding: 4px 12px; margin-top: 20px;
+  font-size: 10px; font-weight: 700; color: var(--success);
+  letter-spacing: .5px;
+}
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 1.5s infinite; }
+
+.panel-feats { display: flex; flex-direction: column; gap: 16px; margin-top: auto;}
+.feat { display: flex; align-items: flex-start; gap: 12px; }
+.feat-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.feat-text { font-size: 12px; color: rgba(255,255,255,.45); line-height: 1.5; }
+.feat-text b { color: rgba(255,255,255,.85); font-weight: 600; margin-bottom: 2px; }
+
+/* ═══════════════════════════════════
+    DESKTOP PANEL RIGHT
+═══════════════════════════════════ */
+.panel-right {
+  flex: 1;
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: background-color .3s;
+}
+
+.topbar {
+  height: 64px;
+  background: var(--bg-topbar);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; flex-shrink: 0;
+  transition: background-color .3s, border-color .3s;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-btn {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  color: var(--ts);
+  border-radius: 8px;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  box-shadow: var(--sh); transition: all .18s;
+}
+.topbar-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.form-area {
+  flex: 1;
+  display: flex;
+  align-items: flex-start; 
+  justify-content: center;
+  padding: 40px;
+  overflow-y: auto;
+}
+.form-inner {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.form-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+.form-title { font-size: 22px; font-weight: 700; color: var(--tp); letter-spacing: -.4px; }
+.form-sub   { font-size: 13px; color: var(--tm); margin-top: 4px; }
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.grid-left, .grid-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sec-label {
+  font-size: 11px; font-weight: 700; color: var(--tm);
+  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;
+}
+
+.route-wrap { position: relative; }
+.route-inputs { display: flex; flex-direction: column; box-shadow: var(--sh); border-radius: var(--r); overflow: hidden;}
+.input-row {
+  display: flex; align-items: center; gap: 12px;
+  border: 1.5px solid var(--border); background: var(--bg-card); padding: 0 16px;
+  transition: all .18s;
+}
+.input-row:first-child { border-radius: var(--r) var(--r) 0 0; border-bottom: none; }
+.input-row:last-child  { border-radius: 0 0 var(--r) var(--r); }
+.input-row:focus-within {
+  border-color: var(--orange); background: var(--bg-card);
+  box-shadow: 0 0 0 3px rgba(245,166,35,.11); z-index: 1; position: relative;
+}
+.input-row input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 14px; font-family: inherit; color: var(--tp);
+  padding: 14px 0; font-weight: 500;
+}
+.swap-btn {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--bg-card);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--ts); box-shadow: var(--sh); transition: all .18s; z-index: 2;
+}
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fc {
+  border: 1.5px solid var(--border); border-radius: var(--r);
+  padding: 12px 16px; background: var(--bg-card); transition: all .18s; box-shadow: var(--sh);
+}
+.fc:focus-within { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(245,166,35,.11); }
+.fc label {
+  display: block; font-size: 10px; font-weight: 700; color: var(--tm);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px;
+}
+.fc-row { display: flex; align-items: center; gap: 8px; }
+.fc input[type="number"] {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 22px; font-weight: 700; color: var(--tp); font-family: inherit; min-width: 0;
+}
+.fc-unit { font-size: 12px; color: var(--tm); }
+
+.bike-selector {
+  display: flex;
+  background: var(--bg-header);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px;
+  gap: 4px;
+  box-shadow: var(--sh);
+}
+.bike-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ts);
+  cursor: pointer;
+  border-radius: calc(var(--r) - 4px);
+  transition: all .2s;
+}
+.bike-option.active[data-type="all"] { background: var(--bg-card); color: var(--tp); box-shadow: var(--sh); border: 1px solid var(--border); }
+.bike-option.active[data-type="2.0E"] { background: var(--purple); color: #fff; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+.bike-option.active[data-type="2.0"] { background: var(--orange); color: var(--navy); box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3); }
+
+.filters { border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; background: var(--bg-card); box-shadow: var(--sh); }
+.fh {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; background: var(--bg-header);
+  cursor: pointer; user-select: none; border-bottom: 1.5px solid transparent; transition: all .18s;
+}
+.fh.open { border-bottom-color: var(--border); background: var(--bg-card); }
+.fh-l { display: flex; align-items: center; gap: 12px; }
+.fh-icon {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: var(--orange-dim); border: 1px solid rgba(245,166,35,.25);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.fh-t { font-size: 13px; font-weight: 600; color: var(--tp); }
+.fh-s { font-size: 11px; color: var(--tm); margin-top: 2px; }
+.fb { display: none; padding: 16px; flex-direction: column; gap: 14px; }
+.fb.open { display: flex; }
+.fr { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.fn { font-size: 13px; font-weight: 600; color: var(--tp); }
+.fd { font-size: 11px; color: var(--tm); margin-top: 4px; line-height: 1.5; }
+.fbadge {
+  display: inline-block; margin-top: 6px;
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 12px;
+}
+
+.toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; display: inline-block; }
+.toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.tt { position: absolute; inset: 0; border-radius: 22px; background: var(--border); cursor: pointer; transition: background-color .2s; }
+.toggle input:checked + .tt { background: var(--orange); }
+.th { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: transform .2s; pointer-events: none; }
+.toggle input:checked ~ .th { transform: translateX(18px); }
+
+.bottom-area { grid-column: span 2; margin-top: 4px; }
+.btn-search {
+  width: 100%; padding: 16px; border: none; border-radius: var(--r);
+  background: linear-gradient(135deg, var(--orange) 0%, #e0891a 100%);
+  color: var(--navy); font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(245,166,35,0.25); transition: all .18s;
+}
+.btn-search:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,166,35,0.35); }
+
+.btn-google { display: flex; align-items: center; gap: 7px; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 13px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--tp); font-family: inherit; box-shadow: var(--sh); transition: all .18s; }
+.ubadge { display: none; align-items: center; gap: 7px; background: var(--bg-header); border: 1.5px solid var(--border); border-radius: 22px; padding: 3px 12px 3px 3px; cursor: pointer; }
+.ubadge.on { display: flex; }
+.uav { width: 26px; height: 26px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--navy); }
+.uname { font-size: 12px; font-weight: 500; color: var(--tp); }
+
+/* Modals & Overlays */
+.overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(8,16,32,.72); backdrop-filter: blur(6px); align-items: center; justify-content: center; padding: 20px; }
+.overlay.on { display: flex; }
+.modal { background: var(--bg-card); border-radius: 18px; width: 100%; max-width: 380px; box-shadow: 0 24px 64px rgba(0,0,0,.28); overflow: hidden; animation: mIn .28s cubic-bezier(.16,1,.3,1) both; border: 1px solid var(--border); }
+@keyframes mIn { from{opacity:0;transform:scale(.93) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-top { background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%); padding: 26px 26px 20px; text-align: center; position: relative; }
+.mcls { position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(255,255,255,.1); color: rgba(255,255,255,.55); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all .14s; }
+.mlogo { width: 46px; height: 46px; border-radius: 50%; background: var(--orange); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 800; color: var(--navy); box-shadow: 0 4px 14px rgba(245,166,35,.38); }
+.modal-top h2 { font-size: 17px; font-weight: 700; color: #fff; }
+.modal-top p  { font-size: 12px; color: rgba(255,255,255,.48); margin-top: 3px; }
+.modal-body { padding: 22px 24px 26px; }
+.gbtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 11px; background: #fff; border: 1.5px solid #dadce0; border-radius: 9px; padding: 12px 18px; cursor: pointer; font-size: 13.5px; font-weight: 600; font-family: inherit; color: #3c4043; box-shadow: var(--sh); transition: all .18s; }
+.mdiv { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.mdiv span { font-size: 10px; color: var(--tm); white-space: nowrap; }
+.mdiv::before,.mdiv::after { content:''; flex:1; height:1px; background:var(--border); }
+.mben { display: flex; flex-direction: column; gap: 9px; }
+.ben-row { display: flex; align-items: center; gap: 9px; }
+.ben-ico { width: 26px; height: 26px; border-radius: 7px; background: var(--bg-header); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.ben-txt { font-size: 12.5px; color: var(--ts); }
+.ben-txt b { color: var(--tp); font-weight: 600; margin-bottom: 2px; }
+.mnote { font-size: 10px; color: var(--tm); text-align: center; margin-top: 16px; line-height: 1.6; }
+.mnote a { color: var(--orange); text-decoration: none; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--navy); color: #fff; border-radius: 22px; padding: 10px 20px; font-size: 12.5px; font-weight: 500; box-shadow: 0 8px 28px rgba(0,0,0,.22); z-index: 300; display: flex; align-items: center; gap: 7px; transition: transform .32s cubic-bezier(.16,1,.3,1), opacity .32s; opacity: 0; white-space: nowrap; }
+.toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+.tdot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.fdiv { height: 1px; background: var(--border); }
+.thr-row { padding: 0 0 0 40px; display: flex; align-items: center; gap: 8px; }
+.thr-row span { font-size: 11px; color: var(--tm); }
+.thr-ctrl { display: flex; align-items: center; gap: 5px; }
+.thr-v { font-size: 13px; font-weight: 700; color: var(--tp); min-width: 20px; text-align: center; }
+.tb { width: 24px; height: 24px; border: 1.5px solid var(--border); border-radius: 5px; background: var(--bg-card); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--ts); transition: all .14s; }
+.tb:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+.sb { width: 24px; height: 19px; border: 1.5px solid var(--border); border-radius: 5px; background: var(--bg-card); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--ts); transition: all .14s; line-height: 1; }
+.sb:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+.stepper { display: flex; flex-direction: column; gap: 2px; margin-left: auto; }
+.bd { background: rgba(239,68,68,.1); color: var(--danger); }
+.bw { background: rgba(245,158,11,.1); color: var(--warning); }
+.bp { background: rgba(139,92,246,.1); color: var(--purple); }
+
+/* 音樂波形動畫效果 */
+@keyframes musicPulse {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+.music-playing .bar {
+  animation: musicPulse 0.6s ease infinite;
+}
+.music-playing .bar:nth-child(2) { animation-delay: 0.15s; }
+.music-playing .bar:nth-child(3) { animation-delay: 0.3s; }
+
+/* ═══════════════════════════════════
+    新增：左右分欄即時規劃儀表板樣式 (Dashboard Layout)
+═══════════════════════════════════ */
+.dashboard-container {
+  display: none; /* 預設隱藏，搜尋後開啟 */
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 頂部二階段條件過濾列 */
+.dashboard-filter-bar {
+  height: 56px;
+  background: var(--bg-card);
+  border-bottom: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 32px;
+  flex-shrink: 0;
+}
+.dash-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dash-filter-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tm);
+  text-transform: uppercase;
+}
+.dash-btn-group {
+  display: flex;
+  background: var(--bg-header);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.dash-back-btn {
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--tp);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: var(--sh);
+}
+.dash-back-btn:hover,
+.dash-back-btn:focus {
+  border-color: var(--orange);
+  color: var(--orange);
+  transform: translateY(-1px);
+  background: rgba(245,166,35,0.08);
+}
+.dash-filter-btn {
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ts);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dash-filter-btn.active {
+  background: var(--bg-card);
+  color: var(--orange);
+  box-shadow: var(--sh);
+}
+
+/* 左右切分主區塊 */
+.dashboard-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* 左半邊：地圖與地形圖 */
+.dash-left-panel {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  gap: 20px;
+  background: var(--bg-header);
+  border-right: 1.5px solid var(--border);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.6) transparent;
+}
+.dash-left-panel::-webkit-scrollbar {
+  width: 8px;
+}
+.dash-left-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dash-left-panel::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,.6);
+  border-radius: 999px;
+}
+.dash-left-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(148,163,184,.9);
+}
+.dash-map-view {
+  flex: 2;
+  min-height: 260px;
+  background: var(--bg-card);
+  border-radius: var(--r);
+  border: 2px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ts);
+}
+.dash-elevation-view {
+  flex: 1;
+  min-height: 180px;
+  background: var(--bg-card);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  padding: 16px;
+  box-shadow: var(--sh);
+  display: flex;
+  flex-direction: column;
+}
+.dash-elevation-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tp);
+  margin-bottom: 10px;
+}
+.dash-chart-placeholder {
+  flex: 1;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--tm);
+  text-align: center;
+  background: var(--bg-header);
+}
+
+/* 右半邊：10個最佳路線列表 */
+.dash-right-panel {
+  width: 420px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+}
+.dash-list-header {
+  padding: 18px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tp);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-header);
+}
+.dash-route-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 路線卡片設計 */
+.dash-route-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  cursor: pointer;
+  background: var(--bg-card);
+  box-shadow: var(--sh);
+  transition: all 0.2s ease;
+}
+.dash-route-card:hover {
+  border-color: var(--orange);
+  transform: translateY(-1px);
+}
+.dash-route-card.active {
+  border-color: var(--orange);
+  background: var(--orange-dim);
+  box-shadow: 0 0 0 3px rgba(245,166,35,0.15);
+}
+.d-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.d-tag-container {
+  display: flex;
+  gap: 6px;
+}
+.d-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.d-tag-fast { background: #e0f2fe; color: #0369a1; }
+.d-tag-flat { background: #dcfce7; color: #15803d; }
+.d-tag-free { background: #fef9c3; color: #a16207; }
+
+.d-time-info {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--tp);
+}
+.d-time-unit {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ts);
+}
+.d-card-mid {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--ts);
+  margin-bottom: 10px;
+}
+.d-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+  color: var(--tm);
+}
+.d-station-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.d-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.d-dot-green { background-color: var(--success); }
+.d-dot-warning { background-color: var(--warning); }
+
+.dash-route-list::-webkit-scrollbar { width: 6px; }
+.dash-route-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ═══════════════════════════════════
+    MOBILE RESPONSIVE
+═══════════════════════════════════ */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow: auto; }
+  body { overflow-x: hidden; }
+  .app { flex-direction: column; height: auto; overflow: visible; min-height: 100vh; }
+  .panel-left { display: none; }
+  .panel-right { flex: none; overflow: visible; min-height: 100vh; }
+  .topbar { position: sticky; top: 0; z-index: 50; height: 56px; padding: 0 16px; background: var(--bg-topbar); border-bottom: 1px solid var(--border); justify-content: space-between; }
+  .topbar-logo { display: flex; align-items: center; gap: 8px; }
+  .topbar-logo-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: var(--navy); }
+  .topbar-logo-text { font-size: 15px; font-weight: 700; color: var(--tp); }
+  
+  .btn-google { background: var(--bg-card); border-color: var(--border); color: var(--tp); font-size: 12px; padding: 5px 10px; }
+  .ubadge { background: transparent; border-color: rgba(255,255,255,.2); }
+  .uname { color: var(--tp); }
+  .mobile-hero { display: block; background: linear-gradient(135deg, #0a1628 0%, #102255 100%); padding: 22px 18px 20px; position: relative; overflow: hidden; }
+  .mobile-hero::after { content: ''; position: absolute; right: -24px; top: -24px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(245,166,35,.2) 0%, transparent 70%); pointer-events: none; }
+  .mobile-hero h2 { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -.4px; }
+  .mobile-hero h2 em { color: var(--orange); font-style: normal; }
+  .mobile-hero p  { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 4px; }
+  
+  .form-area { display: block; padding: 18px 16px 32px; overflow: visible; }
+  .form-inner { max-width: 100%; gap: 16px; }
+  .form-title, .form-sub { display: none; }
+  .main-grid { grid-template-columns: 1fr; gap: 16px; }
+  .bottom-area { grid-column: span 1; }
+  .input-row input { padding: 13px 0; font-size: 14px; }
+  .fc input[type="number"] { font-size: 22px; }
+  .btn-search { padding: 14px; font-size: 15px; }
+
+  /* 行動版儀表板調適 */
+  .dashboard-container { flex-direction: column; overflow: visible; }
+  .dashboard-filter-bar { flex-direction: column; height: auto; padding: 12px; gap: 10px; align-items: flex-start; }
+  .dashboard-main { flex-direction: column; overflow: visible; }
+  .dash-left-panel { width: 100%; height: 400px; flex-shrink: 0; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .dash-right-panel { width: 100%; height: auto; }
+}
+
+.mobile-hero { display: none; }
+.topbar-logo { display: none; }
+@media (max-width: 768px) {
+  .topbar-logo { display: flex; }
+}
+</style>
+</head>
+<body>
+
+<audio id="bgMusic" loop src="https://assets.mixkit.co/music/preview/mixkit-valley-sunset-122.mp3"></audio>
+
+<div class="app">
+
+  <!-- 左側邊欄維持不變 -->
+  <div class="panel-left">
+    <div>
+      <div class="logo">
+        <div class="logo-dot">Y</div>
+        <div class="logo-text" id="l-sideLogo">YouBike 智慧導航</div>
+      </div>
+      <div class="panel-hero">
+        <h1 id="l-sideTitle">找到<em>最佳</em><br>共享單車路線</h1>
+        <p id="l-sideSub">整合即時車位與地形高程資料，聰明避開空站與陡坡。</p>
+        <div class="live-chip"><div class="live-dot"></div><span id="l-liveSync">即時資料同步中</span></div>
+      </div>
+    </div>
+    
+    <div class="panel-feats">
+      <div class="feat"><div class="feat-icon">⚡</div><div class="feat-text"><b id="l-f1Title">即時預測・避免撲空</b><span id="l-f1Sub">排除低可借量與高滿位率站點</span></div></div>
+      <div class="feat"><div class="feat-icon">🚴</div><div class="feat-text"><b id="l-f2Title">地形坡度避讓</b><span id="l-f2Sub">自動規劃最省力的平坦路線</span></div></div>
+    </div>
+  </div>
+
+  <!-- 右側主要工作面板 -->
+  <div class="panel-right">
+
+    <!-- 頂部功能條維持不變 -->
+    <div class="topbar">
+      <div class="topbar-logo">
+        <div class="topbar-logo-dot">Y</div>
+        <div class="topbar-logo-text">YouBike 智慧路線</div>
+      </div>
+      
+      <div class="topbar-actions">
+        <button class="topbar-btn" id="musicBtn" onclick="toggleMusic()" title="Play/Pause Music" style="display: flex; gap: 2px; padding: 0 8px; width: auto; min-width: 36px;">
+          <span style="font-size:12px;">🔇</span>
+        </button>
+        <button class="topbar-btn" id="langBtn" onclick="toggleLang()" title="Switch Language">EN</button>
+        <button class="topbar-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+        
+        <button class="btn-google" id="loginBtn" onclick="openModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          <span id="l-loginText">Google 帳號登入</span>
+        </button>
+        <div class="ubadge" id="ubadge">
+          <div class="uav" id="uav">U</div>
+          <span class="uname" id="uname">使用者</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 視窗 1：原始路徑設定表單區塊 -->
+    <div id="search-view-wrapper" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+      <div class="mobile-hero">
+        <h2 id="l-mHeroTitle">智慧 <em>YouBike</em> 路線規劃</h2>
+        <p id="l-mHeroSub">即時車位分析・自動推薦最佳站點</p>
+      </div>
+
+      <div class="form-area">
+        <div class="form-inner">
+          <div class="form-header">
+            <div class="form-title" id="l-mainTitle">路徑設定與偏好</div>
+            <div class="form-sub" id="l-mainSub">輸入起終點，系統將為您量身打造最佳通勤路徑</div>
+          </div>
+
+          <div class="main-grid">
+            <div class="grid-left">
+              <div>
+                <div class="sec-label" id="l-secRoute">起訖點設定</div>
+                <div class="route-wrap">
+                  <div class="route-inputs">
+                    <div class="input-row">
+                      <svg class="iico s" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/></svg>
+                      <input type="text" id="startIn" placeholder="請輸入出發地、捷運站或地標..." autocomplete="off">
+                    </div>
+                    <div class="input-row">
+                      <svg class="iico e" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                      <input type="text" id="endIn" placeholder="請輸入目的地..." autocomplete="off">
+                    </div>
+                  </div>
+                  <button class="swap-btn" onclick="swap()" id="l-swapBtn" title="交換起終點">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="two-col">
+                <div class="fc">
+                  <label id="l-walkLabel">可步行極限</label>
+                  <div class="fc-row">
+                    <input type="number" id="walkIn" value="10" min="1" max="60">
+                    <span class="fc-unit" id="l-walkUnit">分鐘</span>
+                    <div class="stepper">
+                      <button class="sb" onclick="adj('walkIn',1)">▲</button>
+                      <button class="sb" onclick="adj('walkIn',-1)">▼</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="fc">
+                  <label id="l-countLabel">同行人數</label>
+                  <div class="fc-row">
+                    <input type="number" id="persIn" value="1" min="1" max="20">
+                    <span class="fc-unit" id="l-countUnit">人</span>
+                    <div class="stepper">
+                      <button class="sb" onclick="adj('persIn',1)">▲</button>
+                      <button class="sb" onclick="adj('persIn',-1)">▼</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="sec-label" id="l-secBike">優先車款偏好</div>
+                <div class="bike-selector">
+                  <div class="bike-option active" data-type="all" onclick="selectBikeType('all')" id="l-bikeAll">混合推薦</div>
+                  <div class="bike-option" data-type="2.0E" onclick="selectBikeType('2.0E')" id="l-bike20E">⚡ 2.0E 電輔車</div>
+                  <div class="bike-option" data-type="2.0" onclick="selectBikeType('2.0')" id="l-bike20">🚴 2.0 一般車</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-right">
+              <div>
+                <div class="sec-label" id="l-secFilter">智慧過濾機制</div>
+                <div class="filters">
+                  <div class="fh open" id="fh" onclick="toggleF()">
+                    <div class="fh-l">
+                      <div class="fh-icon">⚡</div>
+                      <div>
+                        <div class="fh-t" id="l-fHeaderTitle">動態車位預測系統</div>
+                        <div class="fh-s" id="l-fHeaderSub">根據即時大數據排除高機率鋪空站點</div>
+                      </div>
+                    </div>
+                    <svg class="chev open" id="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                  </div>
+                  <div class="fb open" id="fb">
+                    <div class="fr">
+                      <div class="fi">
+                        <div class="fn" id="l-f1Main">起點保障：排除無車可借站</div>
+                        <div class="fd" id="l-f1Desc">自動過濾車輛數 &lt; <b id="minL">3</b> 台的站點，確保全員皆有車可騎。</div>
+                        <span class="fbadge bd" id="l-f1Badge">安全防線</span>
+                      </div>
+                      <label class="toggle"><input type="checkbox" checked><div class="tt"></div><div class="th"></div></label>
+                    </div>
+                    <div class="thr-row">
+                      <span id="l-f1Setting">容許最低車輛</span>
+                      <div class="thr-ctrl">
+                        <button class="tb" onclick="adjT('min',-1)">−</button>
+                        <span class="thr-v" id="minV">3</span>
+                        <button class="tb" onclick="adjT('min',1)">＋</button>
+                      </div>
+                      <span id="l-f1Unit">台</span>
+                    </div>
+                    <div class="fdiv"></div>
+                    <div class="fr">
+                      <div class="fi">
+                        <div class="fn" id="l-f2Main">終點保障：排除滿位風險</div>
+                        <div class="fd" id="l-f2Desc">自動過濾滿位率 &gt; <b id="maxL">80</b>% 的站點，改推周邊有空位站點。</div>
+                        <span class="fbadge bw" id="l-f2Badge">還車無憂</span>
+                      </div>
+                      <label class="toggle"><input type="checkbox" checked><div class="tt"></div><div class="th"></div></label>
+                    </div>
+                    <div class="thr-row">
+                      <span id="l-f2Setting">最大滿位臨界</span>
+                      <div class="thr-ctrl">
+                        <button class="tb" onclick="adjT('max',-5)">−</button>
+                        <span class="thr-v" id="maxV">80</span>
+                        <button class="tb" onclick="adjT('max',5)">＋</button>
+                      </div>
+                      <span>%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 按下這個按鈕後，會動態執行切換 -->
+            <div class="bottom-area">
+              <button class="btn-search" id="searchBtn" onclick="doSearch()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <span id="l-searchBtnText">即時規劃最佳智慧路線</span>
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 視窗 2：新增的左右分欄即時結果面板 (預設隱藏) -->
+    <div id="dashboard-view-wrapper" class="dashboard-container">
+      <!-- 頂部二階段功能過濾列 -->
+      <div class="dashboard-filter-bar">
+        <button class="dash-back-btn" id="l-dashBackBtn" onclick="goBack()">← 回上一頁</button>
+        <div class="dash-filter-group">
+          <span class="dash-filter-label" id="l-dashPrefLabel">路徑偏好</span>
+          <div class="dash-btn-group">
+            <button class="dash-filter-btn active" id="l-dashPrefFast" onclick="toggleDashFilter(this, 'pref')">⚡ 最快抵達</button>
+            <button class="dash-filter-btn" id="l-dashPrefFlat" onclick="toggleDashFilter(this, 'pref')">⛰️ 平坦優先</button>
+          </div>
+        </div>
+        <div class="dash-filter-group">
+          <span class="dash-filter-label" id="l-dashCostLabel">費用方案</span>
+          <div class="dash-btn-group">
+            <button class="dash-filter-btn active" id="l-dashCostFree" onclick="toggleDashFilter(this, 'cost')">前 30 分鐘免費</button>
+            <button class="dash-filter-btn" id="l-dashCostOffer" onclick="toggleDashFilter(this, 'cost')">優惠內抵達</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 左右二分切分主區塊 -->
+      <div class="dashboard-main">
+        <!-- 左半邊：地圖 + 坡度地形圖 -->
+        <div class="dash-left-panel">
+          <div class="dash-map-view" id="dash-map-panel">
+            🗺️ 即時路徑軌跡地圖加載中...
+          </div>
+          <div class="dash-elevation-view">
+            <div class="dash-elevation-title" id="l-dashElevationTitle">📈 路徑坡度陡峭圖 (縱軸: 海拔 / 橫軸: 距離)</div>
+            <div class="dash-chart-placeholder" id="dash-elevation-panel">
+              點擊右側路線以即時渲染高度剖面圖
+            </div>
+          </div>
+        </div>
+
+        <!-- 右半邊：10 個推薦路線卡片列表 -->
+        <div class="dash-right-panel">
+          <div class="dash-list-header" id="dash-results-title">
+            🔍 為您找到 10 個最佳路線選項
+          </div>
+          <div class="dash-route-list" id="dash-route-list-container">
+            <!-- 由 JS 渲染動態卡片 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal 彈窗與 Toast 維持不變 -->
+<div class="overlay" id="overlay" onclick="closeOuter(event)">
+  <div class="modal">
+    <div class="modal-top">
+      <button class="mcls" onclick="closeModal()">✕</button>
+      <div class="mlogo">Y</div>
+      <h2 id="l-modalTitle">登入 YouBike 智慧路線</h2>
+      <p id="l-modalSub">儲存常用路線・取得個人化推薦</p>
+    </div>
+    <div class="modal-body">
+      <button class="gbtn" onclick="doLogin()">
+        <svg width="19" height="19" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <span id="l-modalGbtn">以 Google 帳號繼續</span>
+      </button>
+      <div class="mdiv"><span id="l-modalFeatureTitle">登入後享有</span></div>
+      <div class="mben">
+        <div class="ben-row"><div class="ben-ico">⭐</div><div class="ben-txt"><b id="l-mb1T">儲存常用起終點</b><span id="l-mb1S">，一鍵重複搜尋</span></div></div>
+        <div class="ben-row"><div class="ben-ico">📊</div><div class="ben-txt"><b id="l-mb2T">騎乘歷史紀錄</b><span id="l-mb2S">與碳排放統計</span></div></div>
+        <div class="ben-row"><div class="ben-ico">🔔</div><div class="ben-txt"><b id="l-mb3T">車位到站通知</b><span id="l-mb3S">，即時推播提醒</span></div></div>
+      </div>
+      <p class="mnote" id="l-modalNote">繼續即代表同意我們的 <a href="#">服務條款</a> 與 <a href="#">隱私政策</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot"></div><span id="tmsg"></span></div>
+
+<script>
+let minV = 3, maxV = 80;
+let currentLang = 'zh';
+let selectedBike = 'all';
+let isMusicPlaying = false;
+
+// 10筆擴充最佳推薦模擬路徑
+const mockRoutes = [
+  { id: 1, time: 18, dist: "3.2 km", maxSlope: "1.2%", cost: 0, tags: { zh: ["最快抵達", "小資首選"], en: ["Fastest", "Free 30m"] }, station: { zh: "還車位充足", en: "Docks Available" }, stationStatus: "green" },
+  { id: 2, time: 22, dist: "3.5 km", maxSlope: "0.5%", cost: 0, tags: { zh: ["平坦優先", "小資首選"], en: ["Flatter", "Free 30m"] }, station: { zh: "還車位充足", en: "Docks Available" }, stationStatus: "green" },
+  { id: 3, time: 25, dist: "3.9 km", maxSlope: "2.0%", cost: 0, tags: { zh: ["小資首選"], en: ["Free 30m"] }, station: { zh: "車位微緊縮", en: "Limited Docks" }, stationStatus: "warning" },
+  { id: 4, time: 28, dist: "4.1 km", maxSlope: "1.5%", cost: 0, tags: { zh: ["小資首選"], en: ["Free 30m"] }, station: { zh: "還車位充足", en: "Docks Available" }, stationStatus: "green" },
+  { id: 5, time: 32, dist: "4.5 km", maxSlope: "0.8%", cost: 5, tags: { zh: ["平坦優先"], en: ["Flatter"] }, station: { zh: "還車位充足", en: "Docks Available" }, stationStatus: "green" },
+  { id: 6, time: 35, dist: "5.0 km", maxSlope: "2.5%", cost: 10, tags: { zh: [], en: [] }, station: { zh: "還車位充足", en: "Docks Available" }, stationStatus: "green" },
+  { id: 7, time: 38, dist: "5.2 km", maxSlope: "3.4%", cost: 10, tags: { zh: [], en: [] }, station: { zh: "車位微緊縮", en: "Limited Docks" }, stationStatus: "warning" },
+  { id: 8, time: 42, dist: "5.8 km", maxSlope: "1.1%", cost: 15, tags: { zh: ["平坦優先"], en: ["Flatter"] }, station: { zh: "還車位充足", en: "Docks Available" }, stationStatus: "green" },
+  { id: 9, time: 45, dist: "6.0 km", maxSlope: "4.2%", cost: 20, tags: { zh: [], en: [] }, station: { zh: "還車位充足", en: "Docks Available" }, stationStatus: "green" },
+  { id: 10, time: 50, dist: "6.7 km", maxSlope: "5.0%", cost: 25, tags: { zh: [], en: [] }, station: { zh: "車位微緊縮", en: "Limited Docks" }, stationStatus: "warning" }
+];
+
+// 語系文本字典擴充儀表板文字
+const i18n = {
+  zh: {
+    sideLogo: "YouBike 智慧導航",
+    sideTitle: "找到<em>最佳</em><br>共享單車路線",
+    sideSub: "整合即時車位與地形高程資料，聰明避開空站與陡坡。",
+    liveSync: "即時資料同步中",
+    f1Title: "即時預測・避免撲空", f1Sub: "排除低可借量與高滿位率站點",
+    f2Title: "地形坡度避讓", f2Sub: "自動規劃最省力的平坦路線",
+    loginText: "Google 帳號登入",
+    mHeroTitle: "智慧 <em>YouBike</em> 路線規劃", mHeroSub: "即時車位分析・自動推薦最佳站點",
+    mainTitle: "路徑設定與偏好", mainSub: "輸入起終點，系統將為您量身打造最佳通勤路徑",
+    secRoute: "起訖點設定",
+    secBike: "優先車款偏好",
+    bikeAll: "混合推薦",
+    bike20E: "⚡ 2.0E 電輔車",
+    bike20: "🚴 2.0 一般車",
+    startPlaceholder: "請輸入出發地、捷運站或地標...",
+    endPlaceholder: "請輸入目的地...",
+    walkLabel: "可步行極限", walkUnit: "分鐘",
+    countLabel: "同行人數", countUnit: "人",
+    secFilter: "智慧過濾機制",
+    fHeaderTitle: "動態車位預測系統", fHeaderSub: "根據即時大數據排除高機率鋪空站點",
+    f1Main: "起點保障：排除無車可借站", f1DescPre: "自動過濾車輛數 < ", f1DescSuf: " 台的站點，確保全員皆有車可騎。",
+    f1Badge: "安全防線", f1Setting: "容許最低車輛", f1Unit: "台",
+    f2Main: "終點保障：排除滿位風險", f2DescPre: "自動過濾滿位率 > ", f2DescSuf: "% 的站點，改推周邊有空位站點。",
+    f2Badge: "還車無憂", f2Setting: "最大滿位臨界",
+    searchBtnText: "即時規劃最佳智慧路線",
+    searchLoading: "智慧分析路徑中…",
+    toastWarning: "⚠️ 請輸入起點與終點",
+    toastSuccessAll: "✅ 已為您量身篩選出 3 條黃金單車路線",
+    toastSuccess20E: "⚡ 已優先篩選具備 YouBike 2.0E 電輔車之推薦路線",
+    toastSuccess20: "🚴 已為您篩選 YouBike 2.0 一般單車之平坦路線",
+    toastLogin: "✅ 已成功連動 Google 帳號資料",
+    modalTitle: "登入 YouBike 智慧路線", modalSub: "儲存常用路線・取得個人化推薦",
+    modalGbtn: "以 Google 帳號繼續", modalFeatureTitle: "登入後享有",
+    mb1T: "儲存常用起終點", mb1S: "，一鍵重複搜尋",
+    mb2T: "騎乘歷史紀錄", mb2S: "與碳排放統計",
+    mb3T: "車位到站通知", mb3S: "，即時推播提醒",
+    modalNote: "繼續即代表同意我們的 <a href='#'>服務條款</a> 與 <a href='#'>隱私政策</a>",
+    userDefault: "使用者",
+    // 擴充二階段儀表板字彙
+    dashPrefLabel: "路徑偏好",
+    dashPrefFast: "⚡ 最快抵達",
+    dashPrefFlat: "⛰️ 平坦優先",
+    dashCostLabel: "費用方案",
+    dashCostFree: "前 30 分鐘免費",
+    dashCostOffer: "優惠內抵達",
+    dashElevationTitle: "📈 路徑坡度陡峭圖 (縱軸: 海拔 / 橫軸: 距離)",
+    dashResultsTitlePre: "🔍 為您找到 10 個最佳路線選項",
+    dashRoutePre: "最佳路線選項",
+    dashMapDrawing: "正在動態繪製：【路線選項 ",
+    dashMapTrack: "】的地理軌跡地圖...",
+    dashElevDrawing: "正在生成：選項 ",
+    dashElevSlope: " 的高度地形縱剖面圖",
+    dashCostText: "費用預估: ",
+    dashMaxSlopeText: "最大坡度 ",
+    dashBackBtn: "← 回上一頁"
+  },
+  en: {
+    sideLogo: "YouBike Smart Nav",
+    sideTitle: "Find the <em>Best</em><br>Bike Route",
+    sideSub: "Integrates real-time bike data and elevation map to stay away from empty stations and steep hills.",
+    liveSync: "Live Data Syncing",
+    f1Title: "Real-time Prediction", f1Sub: "Avoid empty stations via smart analysis",
+    f2Title: "Slope Avoidance", f2Sub: "Navigate through flatter and smoother routes",
+    loginText: "Sign in with Google",
+    mHeroTitle: "Smart <em>YouBike</em> Routing", mHeroSub: "Real-time parking analysis & recommendations",
+    mainTitle: "Route Setup & Preferences", mainSub: "Enter origins/destinations for your personalized commute path",
+    secRoute: "Station Settings",
+    secBike: "Bike Type Preference",
+    bikeAll: "Mixed",
+    bike20E: "⚡ 2.0E E-Bike",
+    bike20: "🚴 2.0 Regular",
+    startPlaceholder: "Enter origin, MRT station, or landmark...",
+    endPlaceholder: "Enter destination...",
+    walkLabel: "Max Walking Limit", walkUnit: "mins",
+    countLabel: "Total Passengers", countUnit: "pax",
+    secFilter: "Smart Filter Mechanism",
+    fHeaderTitle: "Dynamic Availability System", fHeaderSub: "Filter out low-availability spots using live big data",
+    f1Main: "Origin Guarantee: Available Bikes First", f1DescPre: "Filter out stations with < ", f1DescSuf: " bikes to ensure everyone gets a ride.",
+    f1Badge: "Safety Net", f1Setting: "Minimum Bikes Required", f1Unit: "bikes",
+    f2Main: "Destination Guarantee: Drop-off Guard", f2DescPre: "Filter out stations with > ", f2DescSuf: "% fullness, suggesting nearby empty docks.",
+    f2Badge: "Hassle-Free Return", f2Setting: "Max Capacity Threshold",
+    searchBtnText: "Find the Best Smart Route Now",
+    searchLoading: "Analyzing paths dynamically...",
+    toastWarning: "⚠️ Please enter both origin and destination",
+    toastSuccessAll: "✅ Tailored 3 optimal bike routes for you",
+    toastSuccess20E: "⚡ Priority routing generated for YouBike 2.0E E-Bikes",
+    toastSuccess20: "🚴 Regular YouBike 2.0 flat routes suggested",
+    toastLogin: "✅ Google account linked successfully",
+    modalTitle: "Sign in to YouBike Smart Route", modalSub: "Save your favorite tracks & unlock insights",
+    modalGbtn: "Continue with Google", modalFeatureTitle: "Unlocked Features",
+    mb1T: "Save Frequent Trips", mb1S: " for quick one-click lookup",
+    mb2T: "Ride History Logs", mb2S: " and carbon footprint tracking",
+    mb3T: "Arrival Alert Notifications", mb3S: " via real-time push alerts",
+    modalNote: "By continuing, you agree to our <a href='#'>Terms</a> & <a href='#'>Privacy Policy</a>",
+    userDefault: "User",
+    // 擴充二階段儀表板字彙
+    dashPrefLabel: "Routing Preference",
+    dashPrefFast: "⚡ Fastest",
+    dashPrefFlat: "⛰️ Flatter",
+    dashCostLabel: "Payment Plans",
+    dashCostFree: "Free 30m",
+    dashCostOffer: "Within Promo",
+    dashElevationTitle: "📈 Elevation Chart (Y-Axis: Elevation / X-Axis: Distance)",
+    dashBackBtn: "← Back",
+    dashResultsTitlePre: "🔍 Found 10 Optimal Bike Routes",
+    dashRoutePre: "Optimal Route Option ",
+    dashMapDrawing: "Rendering dynamic path tracks for Option ",
+    dashMapTrack: "...",
+    dashElevDrawing: "Generating cross-sectional map for Option ",
+    dashElevSlope: " profile",
+    dashCostText: "Est. Cost: ",
+    dashMaxSlopeText: "Max Slope "
+  }
+};
+
+function selectBikeType(type) {
+  selectedBike = type;
+  document.querySelectorAll('.bike-option').forEach(opt => {
+    opt.classList.remove('active');
+  });
+  document.querySelector(`.bike-option[data-type="${type}"]`).classList.add('active');
+}
+
+function toggleMusic() {
+  const music = document.getElementById('bgMusic');
+  const btn = document.getElementById('musicBtn');
+  
+  if (!isMusicPlaying) {
+    music.play().then(() => {
+      isMusicPlaying = true;
+      btn.classList.add('music-playing');
+      btn.innerHTML = `
+        <div style="display:flex; align-items:flex-end; gap:2px; height:16px; width:14px; margin-right:4px;">
+          <div class="bar" style="width:3px; height:4px; background:var(--orange); border-radius:1px;"></div>
+          <div class="bar" style="width:3px; height:4px; background:var(--orange); border-radius:1px;"></div>
+          <div class="bar" style="width:3px; height:4px; background:var(--orange); border-radius:1px;"></div>
+        </div>
+        <span style="font-size:12px;">ON</span>
+      `;
+    }).catch(() => {
+      showToast("⚠️ 瀏覽器阻擋自動播放，請再點擊一次", "#ef4444");
+    });
+  } else {
+    music.pause();
+    isMusicPlaying = false;
+    btn.classList.remove('music-playing');
+    btn.innerHTML = `<span style="font-size:12px;">🔇</span>`;
+  }
+}
+
+function adj(id, d) {
+  const el = document.getElementById(id);
+  el.value = Math.max(+el.min||1, Math.min(+el.max||999, (+el.value||0)+d));
+}
+
+function adjT(k, d) {
+  if (k==='min') {
+    minV = Math.max(1, Math.min(20, minV+d));
+    document.getElementById('minV').textContent = minV;
+    document.getElementById('minL').textContent = minV;
+  } else {
+    maxV = Math.max(10, Math.min(100, maxV+d));
+    document.getElementById('maxV').textContent = maxV;
+    document.getElementById('maxL').textContent = maxV;
+  }
+}
+
+function swap() {
+  const s = document.getElementById('startIn'), e = document.getElementById('endIn');
+  [s.value, e.value] = [e.value, s.value];
+}
+
+function toggleF() {
+  document.getElementById('fb').classList.toggle('open');
+  document.getElementById('fh').classList.toggle('open');
+  document.getElementById('chev').classList.toggle('open');
+}
+
+// ═══════════════════════════════════
+//    修改核心：按下規劃按鈕切換至左右分欄
+// ═══════════════════════════════════
+function doSearch() {
+  const s = document.getElementById('startIn').value.trim();
+  const e = document.getElementById('endIn').value.trim();
+  const lang = i18n[currentLang];
+  
+  if (!s||!e) { showToast(lang.toastWarning, '#f59e0b'); return; }
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> <span id="l-searchBtnText">${lang.searchLoading}</span>`;
+  
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> <span id="l-searchBtnText">${lang.searchBtnText}</span>`;
+    
+    if(selectedBike === '2.0E') {
+      showToast(lang.toastSuccess20E, '#8b5cf6');
+    } else if (selectedBike === '2.0') {
+      showToast(lang.toastSuccess20, '#f5a623');
+    } else {
+      showToast(lang.toastSuccessAll);
+    }
+
+    // 【新增過渡邏輯】：隱藏輸入表單區塊，秀出左右分欄儀表板
+    document.getElementById('search-view-wrapper').style.display = 'none';
+    document.getElementById('dashboard-view-wrapper').style.display = 'flex';
+    
+    // 更新儀表板標題
+    document.getElementById('dash-results-title').innerText = `🔍 ${s} ➡️ ${e} (${lang.dashResultsTitlePre})`;
+
+    // 開始繪製卡片與預設選中
+    renderDashRoutes();
+    selectDashRoute(1, document.querySelector('.dash-route-card'));
+
+  }, 1200);
+}
+
+// 渲染儀表板的 10 個路線卡片
+function renderDashRoutes() {
+  const container = document.getElementById('dash-route-list-container');
+  container.innerHTML = '';
+  const lang = i18n[currentLang];
+
+  mockRoutes.forEach((route, index) => {
+    const card = document.createElement('div');
+    card.className = `dash-route-card ${index === 0 ? 'active' : ''}`;
+    card.setAttribute('onclick', `selectDashRoute(${route.id}, this)`);
+
+    let tagsHtml = '';
+    const activeTags = route.tags[currentLang];
+    activeTags.forEach(tag => {
+      let tagClass = 'd-tag-free';
+      if(tag === '最快抵達' || tag === 'Fastest') tagClass = 'd-tag-fast';
+      if(tag === '平坦優先' || tag === 'Flatter') tagClass = 'd-tag-flat';
+      tagsHtml += `<span class="d-tag ${tagClass}">${tag}</span>`;
+    });
+
+    card.innerHTML = `
+      <div class="d-card-top">
+        <div class="d-tag-container">${tagsHtml}</div>
+        <div class="d-time-info">${route.time} <span class="d-time-unit">${currentLang === 'zh' ? '分鐘' : 'mins'}</span></div>
+      </div>
+      <div class="d-card-mid">
+        <div>📏 ${route.dist}</div>
+        <div>⛰️ ${lang.dashMaxSlopeText}${route.maxSlope}</div>
+      </div>
+      <div class="d-card-bottom">
+        <div>💰 ${lang.dashCostText}<strong>$${route.cost}</strong></div>
+        <div class="d-station-status">
+          <span class="d-status-dot d-dot-${route.stationStatus}"></span>
+          <span>${route.station[currentLang]}</span>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// 選取特定路線，連動左側地圖與高度圖
+function selectDashRoute(id, element) {
+  document.querySelectorAll('.dash-route-card').forEach(card => card.classList.remove('active'));
+  element.classList.add('active');
+
+  const mapPanel = document.getElementById('dash-map-panel');
+  const elevationPanel = document.getElementById('dash-elevation-panel');
+  const lang = i18n[currentLang];
+  const routeData = mockRoutes[id-1];
+  
+  mapPanel.innerHTML = `🗺️ ${lang.dashMapDrawing}${id}${lang.dashMapTrack}`;
+  elevationPanel.innerHTML = `📈 ${lang.dashElevDrawing}${id}${lang.dashElevSlope}<br><small style="color:var(--tm); margin-top:4px;">(${lang.dashMaxSlopeText}: ${routeData.maxSlope} / ${routeData.time} ${currentLang === 'zh' ? '分鐘' : 'mins'})</small>`;
+}
+
+// 二階段儀表板篩選按鈕點擊
+function toggleDashFilter(button, group) {
+  const siblings = button.parentNode.querySelectorAll('.dash-filter-btn');
+  siblings.forEach(sib => sib.classList.remove('active'));
+  button.classList.add('active');
+  console.log(`儀表板過濾 [${group}]: ${button.innerText}`);
+}
+
+function goBack() {
+  document.getElementById('dashboard-view-wrapper').style.display = 'none';
+  document.getElementById('search-view-wrapper').style.display = 'flex';
+}
+
+function showToast(msg, col) {
+  const t = document.getElementById('toast');
+  t.querySelector('.tdot').style.background = col||'#22c55e';
+  document.getElementById('tmsg').textContent = msg;
+  t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'), 3000);
+}
+
+function openModal()  { document.getElementById('overlay').classList.add('on'); }
+function closeModal() { document.getElementById('overlay').classList.remove('on'); }
+function closeOuter(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
+
+function doLogin() {
+  closeModal();
+  setTimeout(()=>{
+    document.getElementById('loginBtn').style.display='none';
+    document.getElementById('ubadge').classList.add('on');
+    document.getElementById('uname').textContent = currentLang === 'zh' ? '王小明' : 'John Doe';
+    document.getElementById('uav').textContent = currentLang === 'zh' ? '王' : 'J';
+    showToast(i18n[currentLang].toastLogin);
+  }, 350);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const btn = document.getElementById('themeBtn');
+  
+  if (currentTheme === 'dark') {
+    document.documentElement.removeAttribute('data-theme');
+    btn.textContent = '🌙';
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    btn.textContent = '☀️';
+  }
+}
+
+// ═══════════════════════════════════
+//    切換語言 (同步支援二階段語系切換)
+// ═══════════════════════════════════
+function toggleLang() {
+  currentLang = currentLang === 'zh' ? 'en' : 'zh';
+  const btn = document.getElementById('langBtn');
+  btn.textContent = currentLang === 'zh' ? 'EN' : '繁';
+  
+  const lang = i18n[currentLang];
+  
+  document.getElementById('l-sideLogo').textContent = lang.sideLogo;
+  document.getElementById('l-sideTitle').innerHTML = lang.sideTitle;
+  document.getElementById('l-sideSub').textContent = lang.sideSub;
+  document.getElementById('l-liveSync').textContent = lang.liveSync;
+  document.getElementById('l-f1Title').textContent = lang.f1Title;
+  document.getElementById('l-f1Sub').textContent = lang.f1Sub;
+  document.getElementById('l-f2Title').textContent = lang.f2Title;
+  document.getElementById('l-f2Sub').textContent = lang.f2Sub;
+  document.getElementById('l-loginText').textContent = lang.loginText;
+  document.getElementById('l-mHeroTitle').innerHTML = lang.mHeroTitle;
+  document.getElementById('l-mHeroSub').textContent = lang.mHeroSub;
+  document.getElementById('l-mainTitle').textContent = lang.mainTitle;
+  document.getElementById('l-mainSub').textContent = lang.mainSub;
+  document.getElementById('l-secRoute').textContent = lang.secRoute;
+  document.getElementById('l-secBike').textContent = lang.secBike;
+  
+  document.getElementById('l-bikeAll').textContent = lang.bikeAll;
+  document.getElementById('l-bike20E').textContent = lang.bike20E;
+  document.getElementById('l-bike20').textContent = lang.bike20;
+  
+  document.getElementById('startIn').placeholder = lang.startPlaceholder;
+  document.getElementById('endIn').placeholder = lang.endPlaceholder;
+  
+  document.getElementById('l-walkLabel').textContent = lang.walkLabel;
+  document.getElementById('l-walkUnit').textContent = lang.walkUnit;
+  document.getElementById('l-countLabel').textContent = lang.countLabel;
+  document.getElementById('l-countUnit').textContent = lang.countUnit;
+  
+  document.getElementById('l-secFilter').textContent = lang.secFilter;
+  document.getElementById('l-fHeaderTitle').textContent = lang.fHeaderTitle;
+  document.getElementById('l-fHeaderSub').textContent = lang.fHeaderSub;
+  
+  document.getElementById('l-f1Main').textContent = lang.f1Main;
+  document.getElementById('l-f1Badge').textContent = lang.f1Badge;
+  document.getElementById('l-f1Setting').textContent = lang.f1Setting;
+  document.getElementById('l-f1Unit').textContent = lang.f1Unit;
+  
+  document.getElementById('l-f2Main').textContent = lang.f2Main;
+  document.getElementById('l-f2Badge').textContent = lang.f2Badge;
+  document.getElementById('l-f2Setting').textContent = lang.f2Setting;
+  
+  const searchBtnText = document.getElementById('l-searchBtnText');
+  if (searchBtnText) searchBtnText.textContent = lang.searchBtnText;
+  
+  // 新增：更新第二階段規劃面板的語系
+  document.getElementById('l-dashPrefLabel').textContent = lang.dashPrefLabel;
+  document.getElementById('l-dashPrefFast').textContent = lang.dashPrefFast;
+  document.getElementById('l-dashPrefFlat').textContent = lang.dashPrefFlat;
+  document.getElementById('l-dashCostLabel').textContent = lang.dashCostLabel;
+  document.getElementById('l-dashCostFree').textContent = lang.dashCostFree;
+  document.getElementById('l-dashCostOffer').textContent = lang.dashCostOffer;
+  document.getElementById('l-dashElevationTitle').textContent = lang.dashElevationTitle;
+  document.getElementById('l-dashBackBtn').textContent = lang.dashBackBtn;
+  
+  // 如果已經切換到儀表板，重新繪製列表與當前激活狀態
+  if (document.getElementById('dashboard-view-wrapper').style.display === 'flex') {
+    const s = document.getElementById('startIn').value.trim();
+    const e = document.getElementById('endIn').value.trim();
+    document.getElementById('dash-results-title').innerText = `🔍 ${s} ➡️ ${e} (${lang.dashResultsTitlePre})`;
+    
+    const activeCard = document.querySelector('.dash-route-card.active');
+    const currentActiveId = activeCard ? parseInt(activeCard.getAttribute('onclick').match(/\d+/)[0]) : 1;
+    renderDashRoutes();
+    // 重新找出新渲染的對應卡片並鎖定
+    const allCards = document.querySelectorAll('.dash-route-card');
+    selectDashRoute(currentActiveId, allCards[currentActiveId - 1]);
+  }
+
+  updateDynamicFilterLabels();
+
+  // Modals
+  document.getElementById('l-modalTitle').textContent = lang.modalTitle;
+  document.getElementById('l-modalSub').textContent = lang.modalSub;
+  document.getElementById('l-modalGbtn').textContent = lang.modalGbtn;
+  document.getElementById('l-modalFeatureTitle').textContent = lang.modalFeatureTitle;
+  document.getElementById('l-mb1T').textContent = lang.mb1T;
+  document.getElementById('l-mb1S').textContent = lang.mb1S;
+  document.getElementById('l-mb2T').textContent = lang.mb2T;
+  document.getElementById('l-mb2S').textContent = lang.mb2S;
+  document.getElementById('l-mb3T').textContent = lang.mb3T;
+  document.getElementById('l-mb3S').textContent = lang.mb3S;
+  document.getElementById('l-modalNote').innerHTML = lang.modalNote;
+  
+  if(document.getElementById('ubadge').classList.contains('on')) {
+    document.getElementById('uname').textContent = currentLang === 'zh' ? '王小明' : 'John Doe';
+    document.getElementById('uav').textContent = currentLang === 'zh' ? '王' : 'J';
+  }
+}
+
+function updateDynamicFilterLabels() {
+  const lang = i18n[currentLang];
+  document.getElementById('l-f1Desc').innerHTML = `${lang.f1DescPre}<b id="minL">${minV}</b>${lang.f1DescSuf}`;
+  document.getElementById('l-f2Desc').innerHTML = `${lang.f2DescPre}<b id="maxL">${maxV}</b>${lang.f2DescSuf}`;
+}
+
+const originalAdjT = adjT;
+adjT = function(k, d) {
+  originalAdjT(k, d);
+  updateDynamicFilterLabels();
+}
+
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
+</script>
+</body>
+</html>

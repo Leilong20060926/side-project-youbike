@@ -18,6 +18,8 @@
   --success: #22c55e;
   --warning: #f59e0b;
   --danger: #ef4444;
+  --purple: #8b5cf6;
+  --purple-dim: rgba(139, 92, 246, 0.14);
   --r: 14px;
 
   /* 日間模式變數 (預設) */
@@ -175,7 +177,7 @@ body {
   display: flex;
   align-items: flex-start; 
   justify-content: center;
-  padding: 54px 40px 40px 40px;
+  padding: 40px;
   overflow-y: auto;
 }
 .form-inner {
@@ -183,11 +185,11 @@ body {
   max-width: 800px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 .form-header {
   border-bottom: 1px solid var(--border);
-  padding-bottom: 16px;
+  padding-bottom: 12px;
 }
 .form-title { font-size: 22px; font-weight: 700; color: var(--tp); letter-spacing: -.4px; }
 .form-sub   { font-size: 13px; color: var(--tm); margin-top: 4px; }
@@ -253,6 +255,31 @@ body {
 }
 .fc-unit { font-size: 12px; color: var(--tm); }
 
+/* 車款偏好選擇器加強 */
+.bike-selector {
+  display: flex;
+  background: var(--bg-header);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px;
+  gap: 4px;
+  box-shadow: var(--sh);
+}
+.bike-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ts);
+  cursor: pointer;
+  border-radius: calc(var(--r) - 4px);
+  transition: all .2s;
+}
+.bike-option.active[data-type="all"] { background: var(--bg-card); color: var(--tp); box-shadow: var(--sh); border: 1px solid var(--border); }
+.bike-option.active[data-type="2.0E"] { background: var(--purple); color: #fff; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+.bike-option.active[data-type="2.0"] { background: var(--orange); color: var(--navy); box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3); }
+
 .filters { border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; background: var(--bg-card); box-shadow: var(--sh); }
 .fh {
   display: flex; align-items: center; justify-content: space-between;
@@ -286,7 +313,7 @@ body {
 .th { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: transform .2s; pointer-events: none; }
 .toggle input:checked ~ .th { transform: translateX(18px); }
 
-.bottom-area { grid-column: span 2; margin-top: 8px; }
+.bottom-area { grid-column: span 2; margin-top: 4px; }
 .btn-search {
   width: 100%; padding: 16px; border: none; border-radius: var(--r);
   background: linear-gradient(135deg, var(--orange) 0%, #e0891a 100%);
@@ -339,6 +366,18 @@ body {
 .stepper { display: flex; flex-direction: column; gap: 2px; margin-left: auto; }
 .bd { background: rgba(239,68,68,.1); color: var(--danger); }
 .bw { background: rgba(245,158,11,.1); color: var(--warning); }
+.bp { background: rgba(139,92,246,.1); color: var(--purple); }
+
+/* 音樂波形動畫效果 */
+@keyframes musicPulse {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+.music-playing .bar {
+  animation: musicPulse 0.6s ease infinite;
+}
+.music-playing .bar:nth-child(2) { animation-delay: 0.15s; }
+.music-playing .bar:nth-child(3) { animation-delay: 0.3s; }
 
 /* ═══════════════════════════════════
     MOBILE RESPONSIVE
@@ -382,6 +421,8 @@ body {
 </head>
 <body>
 
+<audio id="bgMusic" loop src="https://assets.mixkit.co/music/preview/mixkit-valley-sunset-122.mp3"></audio>
+
 <div class="app">
 
   <div class="panel-left">
@@ -412,6 +453,9 @@ body {
       </div>
       
       <div class="topbar-actions">
+        <button class="topbar-btn" id="musicBtn" onclick="toggleMusic()" title="Play/Pause Music" style="display: flex; gap: 2px; padding: 0 8px; width: auto; min-width: 36px;">
+          <span style="font-size:12px;">🔇</span>
+        </button>
         <button class="topbar-btn" id="langBtn" onclick="toggleLang()" title="Switch Language">EN</button>
         <button class="topbar-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
         
@@ -482,6 +526,15 @@ body {
                     <button class="sb" onclick="adj('persIn',-1)">▼</button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="sec-label" id="l-secBike">優先車款偏好</div>
+              <div class="bike-selector">
+                <div class="bike-option active" data-type="all" onclick="selectBikeType('all')" id="l-bikeAll">混合推薦</div>
+                <div class="bike-option" data-type="2.0E" onclick="selectBikeType('2.0E')" id="l-bike20E">⚡ 2.0E 電輔車</div>
+                <div class="bike-option" data-type="2.0" onclick="selectBikeType('2.0')" id="l-bike20">🚴 2.0 一般車</div>
               </div>
             </div>
           </div>
@@ -583,6 +636,8 @@ body {
 <script>
 let minV = 3, maxV = 80;
 let currentLang = 'zh';
+let selectedBike = 'all';
+let isMusicPlaying = false;
 
 // 語系文本字典
 const i18n = {
@@ -597,6 +652,10 @@ const i18n = {
     mHeroTitle: "智慧 <em>YouBike</em> 路線規劃", mHeroSub: "即時車位分析・自動推薦最佳站點",
     mainTitle: "路徑設定與偏好", mainSub: "輸入起終點，系統將為您量身打造最佳通勤路徑",
     secRoute: "起訖點設定",
+    secBike: "優先車款偏好",
+    bikeAll: "混合推薦",
+    bike20E: "⚡ 2.0E 電輔車",
+    bike20: "🚴 2.0 一般車",
     startPlaceholder: "請輸入出發地、捷運站或地標...",
     endPlaceholder: "請輸入目的地...",
     walkLabel: "可步行極限", walkUnit: "分鐘",
@@ -610,7 +669,9 @@ const i18n = {
     searchBtnText: "即時規劃最佳智慧路線",
     searchLoading: "智慧分析路徑中…",
     toastWarning: "⚠️ 請輸入起點與終點",
-    toastSuccess: "✅ 已為您量身篩選出 3 條黃金單車路線",
+    toastSuccessAll: "✅ 已為您量身篩選出 3 條黃金單車路線",
+    toastSuccess20E: "⚡ 已優先篩選具備 YouBike 2.0E 電輔車之推薦路線",
+    toastSuccess20: "🚴 已為您篩選 YouBike 2.0 一般單車之平坦路線",
     toastLogin: "✅ 已成功連動 Google 帳號資料",
     modalTitle: "登入 YouBike 智慧路線", modalSub: "儲存常用路線・取得個人化推薦",
     modalGbtn: "以 Google 帳號繼續", modalFeatureTitle: "登入後享有",
@@ -631,6 +692,10 @@ const i18n = {
     mHeroTitle: "Smart <em>YouBike</em> Routing", mHeroSub: "Real-time parking analysis & recommendations",
     mainTitle: "Route Setup & Preferences", mainSub: "Enter origins/destinations for your personalized commute path",
     secRoute: "Station Settings",
+    secBike: "Bike Type Preference",
+    bikeAll: "Mixed",
+    bike20E: "⚡ 2.0E E-Bike",
+    bike20: "🚴 2.0 Regular",
     startPlaceholder: "Enter origin, MRT station, or landmark...",
     endPlaceholder: "Enter destination...",
     walkLabel: "Max Walking Limit", walkUnit: "mins",
@@ -644,7 +709,9 @@ const i18n = {
     searchBtnText: "Find the Best Smart Route Now",
     searchLoading: "Analyzing paths dynamically...",
     toastWarning: "⚠️ Please enter both origin and destination",
-    toastSuccess: "✅ Tailored 3 optimal bike routes for you",
+    toastSuccessAll: "✅ Tailored 3 optimal bike routes for you",
+    toastSuccess20E: "⚡ Priority routing generated for YouBike 2.0E E-Bikes",
+    toastSuccess20: "🚴 Regular YouBike 2.0 flat routes suggested",
     toastLogin: "✅ Google account linked successfully",
     modalTitle: "Sign in to YouBike Smart Route", modalSub: "Save your favorite tracks & unlock insights",
     modalGbtn: "Continue with Google", modalFeatureTitle: "Unlocked Features",
@@ -655,6 +722,43 @@ const i18n = {
     userDefault: "User"
   }
 };
+
+// 車款選擇切換功能
+function selectBikeType(type) {
+  selectedBike = type;
+  document.querySelectorAll('.bike-option').forEach(opt => {
+    opt.classList.remove('active');
+  });
+  document.querySelector(`.bike-option[data-type="${type}"]`).classList.add('active');
+}
+
+// 音樂播放與動態波形切換
+function toggleMusic() {
+  const music = document.getElementById('bgMusic');
+  const btn = document.getElementById('musicBtn');
+  
+  if (!isMusicPlaying) {
+    music.play().then(() => {
+      isMusicPlaying = true;
+      btn.classList.add('music-playing');
+      btn.innerHTML = `
+        <div style="display:flex; align-items:flex-end; gap:2px; height:16px; width:14px; margin-right:4px;">
+          <div class="bar" style="width:3px; height:4px; background:var(--orange); border-radius:1px;"></div>
+          <div class="bar" style="width:3px; height:4px; background:var(--orange); border-radius:1px;"></div>
+          <div class="bar" style="width:3px; height:4px; background:var(--orange); border-radius:1px;"></div>
+        </div>
+        <span style="font-size:12px;">ON</span>
+      `;
+    }).catch(() => {
+      showToast("⚠️ 瀏覽器阻擋自動播放，請再點擊一次", "#ef4444");
+    });
+  } else {
+    music.pause();
+    isMusicPlaying = false;
+    btn.classList.remove('music-playing');
+    btn.innerHTML = `<span style="font-size:12px;">🔇</span>`;
+  }
+}
 
 function adj(id, d) {
   const el = document.getElementById(id);
@@ -693,10 +797,19 @@ function doSearch() {
   const btn = document.getElementById('searchBtn');
   btn.disabled = true;
   btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${lang.searchLoading}`;
+  
   setTimeout(() => {
     btn.disabled = false;
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> ${lang.searchBtnText}`;
-    showToast(lang.toastSuccess);
+    
+    // 依據選取的車款吐出對應的 Toast 回饋
+    if(selectedBike === '2.0E') {
+      showToast(lang.toastSuccess20E, '#8b5cf6');
+    } else if (selectedBike === '2.0') {
+      showToast(lang.toastSuccess20, '#f5a623');
+    } else {
+      showToast(lang.toastSuccessAll);
+    }
   }, 1800);
 }
 
@@ -764,6 +877,12 @@ function toggleLang() {
   document.getElementById('l-mainTitle').textContent = lang.mainTitle;
   document.getElementById('l-mainSub').textContent = lang.mainSub;
   document.getElementById('l-secRoute').textContent = lang.secRoute;
+  document.getElementById('l-secBike').textContent = lang.secBike;
+  
+  // 車款偏好語系
+  document.getElementById('l-bikeAll').textContent = lang.bikeAll;
+  document.getElementById('l-bike20E').textContent = lang.bike20E;
+  document.getElementById('l-bike20').textContent = lang.bike20;
   
   // Input Placeholders
   document.getElementById('startIn').placeholder = lang.startPlaceholder;
