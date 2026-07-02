@@ -1,0 +1,108 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+}
+
+.app-shell {
+  display: flex;
+  height: 100vh;
+}
+
+.panel {
+  width: 360px;
+  padding: 20px;
+  background: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+}
+
+.page {
+  display: block;
+}
+
+.page.hidden {
+  display: none;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label,
+.section-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+button {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+button {
+  background: #1f6feb;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+button:hover {
+  background: #1858b8;
+}
+
+.checkbox-row label,
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+
+.page-actions {
+  margin-bottom: 12px;
+}
+
+.hint-box {
+  background: #eef6ff;
+  border: 1px solid #cfe1ff;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 12px 0;
+}
+
+.route-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.route-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.route-item.active {
+  border-color: #1f6feb;
+  background: #f3f8ff;
+}
+
+.map-area {
+  flex: 1;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YouBike 智慧路徑搜尋</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="panel">
+        <h1>YouBike 智慧路徑搜尋</h1>
+        <p>輸入旅程條件後，系統將協助你規劃更適合的 YouBike 路線。</p>
+
+        <section id="page-setup" class="page" aria-labelledby="setup-title">
+          <h2 id="setup-title">基本條件設定</h2>
+          <form id="setup-form">
+            <div class="form-group">
+              <label for="origin">起點</label>
+              <input id="origin" name="origin" type="text" placeholder="例如：台北車站" required />
+            </div>
+
+            <div class="form-group">
+              <label for="destination">終點</label>
+              <input id="destination" name="destination" type="text" placeholder="例如：世貿中心" required />
+            </div>
+
+            <div class="form-group">
+              <label for="people-count">乘車人數</label>
+              <input id="people-count" name="people-count" type="number" min="1" max="10" value="2" required />
+            </div>
+
+            <div class="form-group">
+              <label for="walk-limit">允許步行最多</label>
+              <select id="walk-limit" name="walk-limit">
+                <option value="5">5 分鐘</option>
+                <option value="10">10 分鐘</option>
+                <option value="15" selected>15 分鐘</option>
+                <option value="20">20 分鐘</option>
+              </select>
+            </div>
+
+            <div class="form-group checkbox-row">
+              <label for="predict-availability">
+                <input id="predict-availability" name="predict-availability" type="checkbox" />
+                <span>即時車位預測（排除低可用率站點）</span>
+              </label>
+            </div>
+
+            <button id="next-step-btn" type="button">下一步：規劃路線</button>
+          </form>
+        </section>
+
+        <section id="page-result" class="page hidden" aria-labelledby="result-title">
+          <div class="page-actions">
+            <button id="back-btn" type="button">返回上一頁</button>
+          </div>
+
+          <h2 id="result-title">路線偏好與結果</h2>
+
+          <div class="form-group">
+            <p class="section-label">車種偏好</p>
+            <label class="option-row">
+              <input type="radio" name="bike-type" value="ebike" checked />
+              <span>優先推薦 YouBike 2.0E（電輔車）</span>
+            </label>
+            <label class="option-row">
+              <input type="radio" name="bike-type" value="standard" />
+              <span>顯示 2.0 一般自行車</span>
+            </label>
+          </div>
+
+          <div class="form-group">
+            <p class="section-label">路線權重</p>
+            <label class="option-row">
+              <input type="radio" name="route-priority" value="time" checked />
+              <span>最快抵達（時間優先）</span>
+            </label>
+            <label class="option-row">
+              <input type="radio" name="route-priority" value="flat" />
+              <span>平坦優先（避開陡坡）</span>
+            </label>
+          </div>
+
+          <div id="bonus-hint" class="hint-box">前 30 分鐘免費補助提醒</div>
+
+          <section class="results-section">
+            <h3>推薦路徑</h3>
+            <ul class="route-list">
+              <li class="route-item active" data-route="route-a">
+                <strong>路線 A</strong>
+                <span>步行 6 分鐘 → 騎乘 14 分鐘</span>
+              </li>
+              <li class="route-item" data-route="route-b">
+                <strong>路線 B</strong>
+                <span>步行 10 分鐘 → 騎乘 19 分鐘</span>
+              </li>
+              <li class="route-item" data-route="route-c">
+                <strong>路線 C</strong>
+                <span>步行 4 分鐘 → 轉乘 1 次</span>
+              </li>
+            </ul>
+          </section>
+        </section>
+      </aside>
+
+      <main class="map-area">
+        <div id="map"></div>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
