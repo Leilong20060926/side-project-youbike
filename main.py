@@ -10,7 +10,7 @@ app = Flask(__name__)
 # ==========================================
 
 def fetch_tdx_station_data():
-    """取得 TDX YouBike 站點基本資料a"""
+    """取得 TDX YouBike 站點基本資料aaa"""
     print("[後端日誌] 呼叫 TDX API 取得站點資訊...")
 
     # TODO: 這裡實際串接 TDX API
