@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouBike 智慧路線查詢</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════
+    THEME CHANGER & VARIABLE BASES
+═══════════════════════════════════ */
+:root {
+  --navy: #0f1f3d;
+  --navy-mid: #1a3260;
+  --orange: #f5a623;
+  --orange-dim: rgba(245,166,35,0.14);
+  --white: #fff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --r: 14px;
+
+  /* 日間模式變數 (預設) */
+  --bg-app: #f5f7fb;
+  --bg-card: #fff;
+  --bg-topbar: rgba(255, 255, 255, 0.8);
+  --bg-header: #f5f7fb;
+  --tp: #0f1f3d;
+  --ts: #556080;
+  --tm: #8d9ab5;
+  --border: #dde3f0;
+  --sh: 0 2px 8px rgba(15,31,61,0.06);
+  --shm: 0 8px 28px rgba(15,31,61,0.1);
+}
+
+/* 夜間模式色彩覆蓋 */
+[data-theme="dark"] {
+  --bg-app: #0b132b;
+  --bg-card: #1c2541;
+  --bg-topbar: rgba(28, 37, 65, 0.8);
+  --bg-header: #111a36;
+  --tp: #f5f7fb;
+  --ts: #9faecb;
+  --tm: #6f7d9c;
+  --border: #2a3759;
+  --sh: 0 4px 12px rgba(0,0,0,0.2);
+  --shm: 0 12px 36px rgba(0,0,0,0.3);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: 'Inter','Noto Sans TC',sans-serif;
+  background: var(--navy);
+  color: var(--tp);
+  overflow: hidden; 
+  transition: color .3s, background-color .3s;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════
+    DESKTOP PANEL LEFT
+═══════════════════════════════════ */
+.panel-left {
+  width: 320px;
+  flex-shrink: 0;
+  background: linear-gradient(160deg, #0a1628 0%, #102255 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 32px;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.panel-left::before {
+  content: '';
+  position: absolute; right: -60px; top: -60px;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--orange); display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: var(--navy);
+  box-shadow: 0 4px 14px rgba(245,166,35,0.4);
+}
+.logo-text { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -.3px; }
+
+.panel-hero { margin: 40px 0; }
+.panel-hero h1 {
+  font-size: 28px; font-weight: 800; color: #fff;
+  line-height: 1.3; letter-spacing: -.6px;
+}
+.panel-hero h1 em { color: var(--orange); font-style: normal; }
+.panel-hero p {
+  font-size: 13.5px; color: rgba(255,255,255,.5);
+  margin-top: 14px; line-height: 1.6;
+}
+.live-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.2);
+  border-radius: 20px; padding: 4px 12px; margin-top: 20px;
+  font-size: 10px; font-weight: 700; color: var(--success);
+  letter-spacing: .5px;
+}
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 1.5s infinite; }
+
+.panel-feats { display: flex; flex-direction: column; gap: 16px; margin-top: auto;}
+.feat { display: flex; align-items: flex-start; gap: 12px; }
+.feat-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.feat-text { font-size: 12px; color: rgba(255,255,255,.45); line-height: 1.5; }
+.feat-text b { color: rgba(255,255,255,.85); font-weight: 600; margin-bottom: 2px; }
+
+/* ═══════════════════════════════════
+    DESKTOP PANEL RIGHT
+═══════════════════════════════════ */
+.panel-right {
+  flex: 1;
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: background-color .3s;
+}
+
+.topbar {
+  height: 64px;
+  background: var(--bg-topbar);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; flex-shrink: 0;
+  transition: background-color .3s, border-color .3s;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 語言與功能按鈕設計 */
+.topbar-btn {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  color: var(--ts);
+  border-radius: 8px;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  box-shadow: var(--sh); transition: all .18s;
+}
+.topbar-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.form-area {
+  flex: 1;
+  display: flex;
+  align-items: flex-start; 
+  justify-content: center;
+  padding: 54px 40px 40px 40px;
+  overflow-y: auto;
+}
+.form-inner {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.form-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+.form-title { font-size: 22px; font-weight: 700; color: var(--tp); letter-spacing: -.4px; }
+.form-sub   { font-size: 13px; color: var(--tm); margin-top: 4px; }
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.grid-left, .grid-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sec-label {
+  font-size: 11px; font-weight: 700; color: var(--tm);
+  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;
+}
+
+.route-wrap { position: relative; }
+.route-inputs { display: flex; flex-direction: column; box-shadow: var(--sh); border-radius: var(--r); overflow: hidden;}
+.input-row {
+  display: flex; align-items: center; gap: 12px;
+  border: 1.5px solid var(--border); background: var(--bg-card); padding: 0 16px;
+  transition: all .18s;
+}
+.input-row:first-child { border-radius: var(--r) var(--r) 0 0; border-bottom: none; }
+.input-row:last-child  { border-radius: 0 0 var(--r) var(--r); }
+.input-row:focus-within {
+  border-color: var(--orange); background: var(--bg-card);
+  box-shadow: 0 0 0 3px rgba(245,166,35,.11); z-index: 1; position: relative;
+}
+.input-row input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 14px; font-family: inherit; color: var(--tp);
+  padding: 14px 0; font-weight: 500;
+}
+.swap-btn {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--bg-card);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--ts); box-shadow: var(--sh); transition: all .18s; z-index: 2;
+}
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fc {
+  border: 1.5px solid var(--border); border-radius: var(--r);
+  padding: 12px 16px; background: var(--bg-card); transition: all .18s; box-shadow: var(--sh);
+}
+.fc:focus-within { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(245,166,35,.11); }
+.fc label {
+  display: block; font-size: 10px; font-weight: 700; color: var(--tm);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px;
+}
+.fc-row { display: flex; align-items: center; gap: 8px; }
+.fc input[type="number"] {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 22px; font-weight: 700; color: var(--tp); font-family: inherit; min-width: 0;
+}
+.fc-unit { font-size: 12px; color: var(--tm); }
+
+.filters { border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; background: var(--bg-card); box-shadow: var(--sh); }
+.fh {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; background: var(--bg-header);
+  cursor: pointer; user-select: none; border-bottom: 1.5px solid transparent; transition: all .18s;
+}
+.fh.open { border-bottom-color: var(--border); background: var(--bg-card); }
+.fh-l { display: flex; align-items: center; gap: 12px; }
+.fh-icon {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: var(--orange-dim); border: 1px solid rgba(245,166,35,.25);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.fh-t { font-size: 13px; font-weight: 600; color: var(--tp); }
+.fh-s { font-size: 11px; color: var(--tm); margin-top: 2px; }
+.fb { display: none; padding: 16px; flex-direction: column; gap: 14px; }
+.fb.open { display: flex; }
+.fr { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.fn { font-size: 13px; font-weight: 600; color: var(--tp); }
+.fd { font-size: 11px; color: var(--tm); margin-top: 4px; line-height: 1.5; }
+.fbadge {
+  display: inline-block; margin-top: 6px;
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 12px;
+}
+
+/* Toggle Switch */
+.toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; display: inline-block; }
+.toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.tt { position: absolute; inset: 0; border-radius: 22px; background: var(--border); cursor: pointer; transition: background-color .2s; }
+.toggle input:checked + .tt { background: var(--orange); }
+.th { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: transform .2s; pointer-events: none; }
+.toggle input:checked ~ .th { transform: translateX(18px); }
+
+.bottom-area { grid-column: span 2; margin-top: 8px; }
+.btn-search {
+  width: 100%; padding: 16px; border: none; border-radius: var(--r);
+  background: linear-gradient(135deg, var(--orange) 0%, #e0891a 100%);
+  color: var(--navy); font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(245,166,35,0.25); transition: all .18s;
+}
+.btn-search:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,166,35,0.35); }
+
+.btn-google { display: flex; align-items: center; gap: 7px; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 13px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--tp); font-family: inherit; box-shadow: var(--sh); transition: all .18s; }
+.ubadge { display: none; align-items: center; gap: 7px; background: var(--bg-header); border: 1.5px solid var(--border); border-radius: 22px; padding: 3px 12px 3px 3px; cursor: pointer; }
+.ubadge.on { display: flex; }
+.uav { width: 26px; height: 26px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--navy); }
+.uname { font-size: 12px; font-weight: 500; color: var(--tp); }
+
+/* Modals & Overlays */
+.overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(8,16,32,.72); backdrop-filter: blur(6px); align-items: center; justify-content: center; padding: 20px; }
+.overlay.on { display: flex; }
+.modal { background: var(--bg-card); border-radius: 18px; width: 100%; max-width: 380px; box-shadow: 0 24px 64px rgba(0,0,0,.28); overflow: hidden; animation: mIn .28s cubic-bezier(.16,1,.3,1) both; border: 1px solid var(--border); }
+@keyframes mIn { from{opacity:0;transform:scale(.93) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-top { background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%); padding: 26px 26px 20px; text-align: center; position: relative; }
+.mcls { position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(255,255,255,.1); color: rgba(255,255,255,.55); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all .14s; }
+.mlogo { width: 46px; height: 46px; border-radius: 50%; background: var(--orange); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 800; color: var(--navy); box-shadow: 0 4px 14px rgba(245,166,35,.38); }
+.modal-top h2 { font-size: 17px; font-weight: 700; color: #fff; }
+.modal-top p  { font-size: 12px; color: rgba(255,255,255,.48); margin-top: 3px; }
+.modal-body { padding: 22px 24px 26px; }
+.gbtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 11px; background: #fff; border: 1.5px solid #dadce0; border-radius: 9px; padding: 12px 18px; cursor: pointer; font-size: 13.5px; font-weight: 600; font-family: inherit; color: #3c4043; box-shadow: var(--sh); transition: all .18s; }
+.mdiv { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.mdiv span { font-size: 10px; color: var(--tm); white-space: nowrap; }
+.mdiv::before,.mdiv::after { content:''; flex:1; height:1px; background:var(--border); }
+.mben { display: flex; flex-direction: column; gap: 9px; }
+.ben-row { display: flex; align-items: center; gap: 9px; }
+.ben-ico { width: 26px; height: 26px; border-radius: 7px; background: var(--bg-header); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.ben-txt { font-size: 12.5px; color: var(--ts); }
+.ben-txt b { color: var(--tp); font-weight: 600; margin-bottom: 2px; }
+.mnote { font-size: 10px; color: var(--tm); text-align: center; margin-top: 16px; line-height: 1.6; }
+.mnote a { color: var(--orange); text-decoration: none; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--navy); color: #fff; border-radius: 22px; padding: 10px 20px; font-size: 12.5px; font-weight: 500; box-shadow: 0 8px 28px rgba(0,0,0,.22); z-index: 300; display: flex; align-items: center; gap: 7px; transition: transform .32s cubic-bezier(.16,1,.3,1), opacity .32s; opacity: 0; white-space: nowrap; }
+.toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+.tdot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.fdiv { height: 1px; background: var(--border); }
+.thr-row { padding: 0 0 0 40px; display: flex; align-items: center; gap: 8px; }
+.thr-row span { font-size: 11px; color: var(--tm); }
+.thr-ctrl { display: flex; align-items: center; gap: 5px; }
+.thr-v { font-size: 13px; font-weight: 700; color: var(--tp); min-width: 20px; text-align: center; }
+.tb { width: 24px; height: 24px; border: 1.5px solid var(--border); border-radius: 5px; background: var(--bg-card); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--ts); transition: all .14s; }
+.tb:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+.sb { width: 24px; height: 19px; border: 1.5px solid var(--border); border-radius: 5px; background: var(--bg-card); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--ts); transition: all .14s; line-height: 1; }
+.sb:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+.stepper { display: flex; flex-direction: column; gap: 2px; margin-left: auto; }
+.bd { background: rgba(239,68,68,.1); color: var(--danger); }
+.bw { background: rgba(245,158,11,.1); color: var(--warning); }
+
+/* ═══════════════════════════════════
+    MOBILE RESPONSIVE
+═══════════════════════════════════ */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow: auto; }
+  body { overflow-x: hidden; }
+  .app { flex-direction: column; height: auto; overflow: visible; min-height: 100vh; }
+  .panel-left { display: none; }
+  .panel-right { flex: none; overflow: visible; min-height: 100vh; }
+  .topbar { position: sticky; top: 0; z-index: 50; height: 56px; padding: 0 16px; background: var(--bg-topbar); border-bottom: 1px solid var(--border); justify-content: space-between; }
+  .topbar-logo { display: flex; align-items: center; gap: 8px; }
+  .topbar-logo-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: var(--navy); }
+  .topbar-logo-text { font-size: 15px; font-weight: 700; color: var(--tp); }
+  
+  .btn-google { background: var(--bg-card); border-color: var(--border); color: var(--tp); font-size: 12px; padding: 5px 10px; }
+  .ubadge { background: transparent; border-color: rgba(255,255,255,.2); }
+  .uname { color: var(--tp); }
+  .mobile-hero { display: block; background: linear-gradient(135deg, #0a1628 0%, #102255 100%); padding: 22px 18px 20px; position: relative; overflow: hidden; }
+  .mobile-hero::after { content: ''; position: absolute; right: -24px; top: -24px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(245,166,35,.2) 0%, transparent 70%); pointer-events: none; }
+  .mobile-hero h2 { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -.4px; }
+  .mobile-hero h2 em { color: var(--orange); font-style: normal; }
+  .mobile-hero p  { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 4px; }
+  
+  .form-area { display: block; padding: 18px 16px 32px; overflow: visible; }
+  .form-inner { max-width: 100%; gap: 16px; }
+  .form-title, .form-sub { display: none; }
+  .main-grid { grid-template-columns: 1fr; gap: 16px; }
+  .bottom-area { grid-column: span 1; }
+  .input-row input { padding: 13px 0; font-size: 14px; }
+  .fc input[type="number"] { font-size: 22px; }
+  .btn-search { padding: 14px; font-size: 15px; }
+}
+
+.mobile-hero { display: none; }
+.topbar-logo { display: none; }
+@media (max-width: 768px) {
+  .topbar-logo { display: flex; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="panel-left">
+    <div>
+      <div class="logo">
+        <div class="logo-dot">Y</div>
+        <div class="logo-text" id="l-sideLogo">YouBike 智慧導航</div>
+      </div>
+      <div class="panel-hero">
+        <h1 id="l-sideTitle">找到<em>最佳</em><br>共享單車路線</h1>
+        <p id="l-sideSub">整合即時車位與地形高程資料，聰明避開空站與陡坡。</p>
+        <div class="live-chip"><div class="live-dot"></div><span id="l-liveSync">即時資料同步中</span></div>
+      </div>
+    </div>
+    
+    <div class="panel-feats">
+      <div class="feat"><div class="feat-icon">⚡</div><div class="feat-text"><b id="l-f1Title">即時預測・避免撲空</b><span id="l-f1Sub">排除低可借量與高滿位率站點</span></div></div>
+      <div class="feat"><div class="feat-icon">🚴</div><div class="feat-text"><b id="l-f2Title">地形坡度避讓</b><span id="l-f2Sub">自動規劃最省力的平坦路線</span></div></div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+
+    <div class="topbar">
+      <div class="topbar-logo">
+        <div class="topbar-logo-dot">Y</div>
+        <div class="topbar-logo-text">YouBike 智慧路線</div>
+      </div>
+      
+      <div class="topbar-actions">
+        <button class="topbar-btn" id="langBtn" onclick="toggleLang()" title="Switch Language">EN</button>
+        <button class="topbar-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+        
+        <button class="btn-google" id="loginBtn" onclick="openModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          <span id="l-loginText">Google 帳號登入</span>
+        </button>
+        <div class="ubadge" id="ubadge">
+          <div class="uav" id="uav">U</div>
+          <span class="uname" id="uname">使用者</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-hero">
+      <h2 id="l-mHeroTitle">智慧 <em>YouBike</em> 路線規劃</h2>
+      <p id="l-mHeroSub">即時車位分析・自動推薦最佳站點</p>
+    </div>
+
+    <div class="form-area">
+      <div class="form-inner">
+        <div class="form-header">
+          <div class="form-title" id="l-mainTitle">路徑設定與偏好</div>
+          <div class="form-sub" id="l-mainSub">輸入起終點，系統將為您量身打造最佳通勤路徑</div>
+        </div>
+
+        <div class="main-grid">
+          
+          <div class="grid-left">
+            <div>
+              <div class="sec-label" id="l-secRoute">起訖點設定</div>
+              <div class="route-wrap">
+                <div class="route-inputs">
+                  <div class="input-row">
+                    <svg class="iico s" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/></svg>
+                    <input type="text" id="startIn" placeholder="請輸入出發地、捷運站或地標..." autocomplete="off">
+                  </div>
+                  <div class="input-row">
+                    <svg class="iico e" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    <input type="text" id="endIn" placeholder="請輸入目的地..." autocomplete="off">
+                  </div>
+                </div>
+                <button class="swap-btn" onclick="swap()" id="l-swapBtn" title="交換起終點">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="two-col">
+              <div class="fc">
+                <label id="l-walkLabel">可步行極限</label>
+                <div class="fc-row">
+                  <input type="number" id="walkIn" value="10" min="1" max="60">
+                  <span class="fc-unit" id="l-walkUnit">分鐘</span>
+                  <div class="stepper">
+                    <button class="sb" onclick="adj('walkIn',1)">▲</button>
+                    <button class="sb" onclick="adj('walkIn',-1)">▼</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fc">
+                <label id="l-countLabel">同行人數</label>
+                <div class="fc-row">
+                  <input type="number" id="persIn" value="1" min="1" max="20">
+                  <span class="fc-unit" id="l-countUnit">人</span>
+                  <div class="stepper">
+                    <button class="sb" onclick="adj('persIn',1)">▲</button>
+                    <button class="sb" onclick="adj('persIn',-1)">▼</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-right">
+            <div>
+              <div class="sec-label" id="l-secFilter">智慧過濾機制</div>
+              <div class="filters">
+                <div class="fh open" id="fh" onclick="toggleF()">
+                  <div class="fh-l">
+                    <div class="fh-icon">⚡</div>
+                    <div>
+                      <div class="fh-t" id="l-fHeaderTitle">動態車位預測系統</div>
+                      <div class="fh-s" id="l-fHeaderSub">根據即時大數據排除高機率鋪空站點</div>
+                    </div>
+                  </div>
+                  <svg class="chev open" id="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="fb open" id="fb">
+                  <div class="fr">
+                    <div class="fi">
+                      <div class="fn" id="l-f1Main">起點保障：排除無車可借站</div>
+                      <div class="fd" id="l-f1Desc">自動過濾車輛數 &lt; <b id="minL">3</b> 台的站點，確保全員皆有車可騎。</div>
+                      <span class="fbadge bd" id="l-f1Badge">安全防線</span>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><div class="tt"></div><div class="th"></div></label>
+                  </div>
+                  <div class="thr-row">
+                    <span id="l-f1Setting">容許最低車輛</span>
+                    <div class="thr-ctrl">
+                      <button class="tb" onclick="adjT('min',-1)">−</button>
+                      <span class="thr-v" id="minV">3</span>
+                      <button class="tb" onclick="adjT('min',1)">＋</button>
+                    </div>
+                    <span id="l-f1Unit">台</span>
+                  </div>
+                  <div class="fdiv"></div>
+                  <div class="fr">
+                    <div class="fi">
+                      <div class="fn" id="l-f2Main">終點保障：排除滿位風險</div>
+                      <div class="fd" id="l-f2Desc">自動過濾滿位率 &gt; <b id="maxL">80</b>% 的站點，改推周邊有空位站點。</div>
+                      <span class="fbadge bw" id="l-f2Badge">還車無憂</span>
+                    </div>
+                    <label class="toggle"><input type="checkbox" checked><div class="tt"></div><div class="th"></div></label>
+                  </div>
+                  <div class="thr-row">
+                    <span id="l-f2Setting">最大滿位臨界</span>
+                    <div class="thr-ctrl">
+                      <button class="tb" onclick="adjT('max',-5)">−</button>
+                      <span class="thr-v" id="maxV">80</span>
+                      <button class="tb" onclick="adjT('max',5)">＋</button>
+                    </div>
+                    <span>%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-area">
+            <button class="btn-search" id="searchBtn" onclick="doSearch()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <span id="l-searchBtnText">即時規劃最佳智慧路線</span>
+            </button>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeOuter(event)">
+  <div class="modal">
+    <div class="modal-top">
+      <button class="mcls" onclick="closeModal()">✕</button>
+      <div class="mlogo">Y</div>
+      <h2 id="l-modalTitle">登入 YouBike 智慧路線</h2>
+      <p id="l-modalSub">儲存常用路線・取得個人化推薦</p>
+    </div>
+    <div class="modal-body">
+      <button class="gbtn" onclick="doLogin()">
+        <svg width="19" height="19" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <span id="l-modalGbtn">以 Google 帳號繼續</span>
+      </button>
+      <div class="mdiv"><span id="l-modalFeatureTitle">登入後享有</span></div>
+      <div class="mben">
+        <div class="ben-row"><div class="ben-ico">⭐</div><div class="ben-txt"><b id="l-mb1T">儲存常用起終點</b><span id="l-mb1S">，一鍵重複搜尋</span></div></div>
+        <div class="ben-row"><div class="ben-ico">📊</div><div class="ben-txt"><b id="l-mb2T">騎乘歷史紀錄</b><span id="l-mb2S">與碳排放統計</span></div></div>
+        <div class="ben-row"><div class="ben-ico">🔔</div><div class="ben-txt"><b id="l-mb3T">車位到站通知</b><span id="l-mb3S">，即時推播提醒</span></div></div>
+      </div>
+      <p class="mnote" id="l-modalNote">繼續即代表同意我們的 <a href="#">服務條款</a> 與 <a href="#">隱私政策</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot"></div><span id="tmsg"></span></div>
+
+<script>
+let minV = 3, maxV = 80;
+let currentLang = 'zh';
+
+// 語系文本字典
+const i18n = {
+  zh: {
+    sideLogo: "YouBike 智慧導航",
+    sideTitle: "找到<em>最佳</em><br>共享單車路線",
+    sideSub: "整合即時車位與地形高程資料，聰明避開空站與陡坡。",
+    liveSync: "即時資料同步中",
+    f1Title: "即時預測・避免撲空", f1Sub: "排除低可借量與高滿位率站點",
+    f2Title: "地形坡度避讓", f2Sub: "自動規劃最省力的平坦路線",
+    loginText: "Google 帳號登入",
+    mHeroTitle: "智慧 <em>YouBike</em> 路線規劃", mHeroSub: "即時車位分析・自動推薦最佳站點",
+    mainTitle: "路徑設定與偏好", mainSub: "輸入起終點，系統將為您量身打造最佳通勤路徑",
+    secRoute: "起訖點設定",
+    startPlaceholder: "請輸入出發地、捷運站或地標...",
+    endPlaceholder: "請輸入目的地...",
+    walkLabel: "可步行極限", walkUnit: "分鐘",
+    countLabel: "同行人數", countUnit: "人",
+    secFilter: "智慧過濾機制",
+    fHeaderTitle: "動態車位預測系統", fHeaderSub: "根據即時大數據排除高機率鋪空站點",
+    f1Main: "起點保障：排除無車可借站", f1DescPre: "自動過濾車輛數 < ", f1DescSuf: " 台的站點，確保全員皆有車可騎。",
+    f1Badge: "安全防線", f1Setting: "容許最低車輛", f1Unit: "台",
+    f2Main: "終點保障：排除滿位風險", f2DescPre: "自動過濾滿位率 > ", f2DescSuf: "% 的站點，改推周邊有空位站點。",
+    f2Badge: "還車無憂", f2Setting: "最大滿位臨界",
+    searchBtnText: "即時規劃最佳智慧路線",
+    searchLoading: "智慧分析路徑中…",
+    toastWarning: "⚠️ 請輸入起點與終點",
+    toastSuccess: "✅ 已為您量身篩選出 3 條黃金單車路線",
+    toastLogin: "✅ 已成功連動 Google 帳號資料",
+    modalTitle: "登入 YouBike 智慧路線", modalSub: "儲存常用路線・取得個人化推薦",
+    modalGbtn: "以 Google 帳號繼續", modalFeatureTitle: "登入後享有",
+    mb1T: "儲存常用起終點", mb1S: "，一鍵重複搜尋",
+    mb2T: "騎乘歷史紀錄", mb2S: "與碳排放統計",
+    mb3T: "車位到站通知", mb3S: "，即時推播提醒",
+    modalNote: "繼續即代表同意我們的 <a href='#'>服務條款</a> 與 <a href='#'>隱私政策</a>",
+    userDefault: "使用者"
+  },
+  en: {
+    sideLogo: "YouBike Smart Nav",
+    sideTitle: "Find the <em>Best</em><br>Bike Route",
+    sideSub: "Integrates real-time bike data and elevation map to stay away from empty stations and steep hills.",
+    liveSync: "Live Data Syncing",
+    f1Title: "Real-time Prediction", f1Sub: "Avoid empty stations via smart analysis",
+    f2Title: "Slope Avoidance", f2Sub: "Navigate through flatter and smoother routes",
+    loginText: "Sign in with Google",
+    mHeroTitle: "Smart <em>YouBike</em> Routing", mHeroSub: "Real-time parking analysis & recommendations",
+    mainTitle: "Route Setup & Preferences", mainSub: "Enter origins/destinations for your personalized commute path",
+    secRoute: "Station Settings",
+    startPlaceholder: "Enter origin, MRT station, or landmark...",
+    endPlaceholder: "Enter destination...",
+    walkLabel: "Max Walking Limit", walkUnit: "mins",
+    countLabel: "Total Passengers", countUnit: "pax",
+    secFilter: "Smart Filter Mechanism",
+    fHeaderTitle: "Dynamic Availability System", fHeaderSub: "Filter out low-availability spots using live big data",
+    f1Main: "Origin Guarantee: Available Bikes First", f1DescPre: "Filter out stations with < ", f1DescSuf: " bikes to ensure everyone gets a ride.",
+    f1Badge: "Safety Net", f1Setting: "Minimum Bikes Required", f1Unit: "bikes",
+    f2Main: "Destination Guarantee: Drop-off Guard", f2DescPre: "Filter out stations with > ", f2DescSuf: "% fullness, suggesting nearby empty docks.",
+    f2Badge: "Hassle-Free Return", f2Setting: "Max Capacity Threshold",
+    searchBtnText: "Find the Best Smart Route Now",
+    searchLoading: "Analyzing paths dynamically...",
+    toastWarning: "⚠️ Please enter both origin and destination",
+    toastSuccess: "✅ Tailored 3 optimal bike routes for you",
+    toastLogin: "✅ Google account linked successfully",
+    modalTitle: "Sign in to YouBike Smart Route", modalSub: "Save your favorite tracks & unlock insights",
+    modalGbtn: "Continue with Google", modalFeatureTitle: "Unlocked Features",
+    mb1T: "Save Frequent Trips", mb1S: " for quick one-click lookup",
+    mb2T: "Ride History Logs", mb2S: " and carbon footprint tracking",
+    mb3T: "Arrival Alert Notifications", mb3S: " via real-time push alerts",
+    modalNote: "By continuing, you agree to our <a href='#'>Terms</a> & <a href='#'>Privacy Policy</a>",
+    userDefault: "User"
+  }
+};
+
+function adj(id, d) {
+  const el = document.getElementById(id);
+  el.value = Math.max(+el.min||1, Math.min(+el.max||999, (+el.value||0)+d));
+}
+
+function adjT(k, d) {
+  if (k==='min') {
+    minV = Math.max(1, Math.min(20, minV+d));
+    document.getElementById('minV').textContent = minV;
+    document.getElementById('minL').textContent = minV;
+  } else {
+    maxV = Math.max(10, Math.min(100, maxV+d));
+    document.getElementById('maxV').textContent = maxV;
+    document.getElementById('maxL').textContent = maxV;
+  }
+}
+
+function swap() {
+  const s = document.getElementById('startIn'), e = document.getElementById('endIn');
+  [s.value, e.value] = [e.value, s.value];
+}
+
+function toggleF() {
+  document.getElementById('fb').classList.toggle('open');
+  document.getElementById('fh').classList.toggle('open');
+  document.getElementById('chev').classList.toggle('open');
+}
+
+function doSearch() {
+  const s = document.getElementById('startIn').value.trim();
+  const e = document.getElementById('endIn').value.trim();
+  const lang = i18n[currentLang];
+  
+  if (!s||!e) { showToast(lang.toastWarning, '#f59e0b'); return; }
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> ${lang.searchLoading}`;
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> ${lang.searchBtnText}`;
+    showToast(lang.toastSuccess);
+  }, 1800);
+}
+
+function showToast(msg, col) {
+  const t = document.getElementById('toast');
+  t.querySelector('.tdot').style.background = col||'#22c55e';
+  document.getElementById('tmsg').textContent = msg;
+  t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'), 3000);
+}
+
+function openModal()  { document.getElementById('overlay').classList.add('on'); }
+function closeModal() { document.getElementById('overlay').classList.remove('on'); }
+function closeOuter(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
+
+function doLogin() {
+  closeModal();
+  setTimeout(()=>{
+    document.getElementById('loginBtn').style.display='none';
+    document.getElementById('ubadge').classList.add('on');
+    document.getElementById('uname').textContent = currentLang === 'zh' ? '王小明' : 'John Doe';
+    document.getElementById('uav').textContent = currentLang === 'zh' ? '王' : 'J';
+    showToast(i18n[currentLang].toastLogin);
+  }, 350);
+}
+
+// ═══════════════════════════════════
+//    切換日夜模式 (Theme Toggle)
+// ═══════════════════════════════════
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const btn = document.getElementById('themeBtn');
+  
+  if (currentTheme === 'dark') {
+    document.documentElement.removeAttribute('data-theme');
+    btn.textContent = '🌙';
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    btn.textContent = '☀️';
+  }
+}
+
+// ═══════════════════════════════════
+//    切換語言 (Language Toggle)
+// ═══════════════════════════════════
+function toggleLang() {
+  currentLang = currentLang === 'zh' ? 'en' : 'zh';
+  const btn = document.getElementById('langBtn');
+  btn.textContent = currentLang === 'zh' ? 'EN' : '繁';
+  
+  const lang = i18n[currentLang];
+  
+  // 更新所有對應的 DOM 元素文本
+  document.getElementById('l-sideLogo').textContent = lang.sideLogo;
+  document.getElementById('l-sideTitle').innerHTML = lang.sideTitle;
+  document.getElementById('l-sideSub').textContent = lang.sideSub;
+  document.getElementById('l-liveSync').textContent = lang.liveSync;
+  document.getElementById('l-f1Title').textContent = lang.f1Title;
+  document.getElementById('l-f1Sub').textContent = lang.f1Sub;
+  document.getElementById('l-f2Title').textContent = lang.f2Title;
+  document.getElementById('l-f2Sub').textContent = lang.f2Sub;
+  document.getElementById('l-loginText').textContent = lang.loginText;
+  document.getElementById('l-mHeroTitle').innerHTML = lang.mHeroTitle;
+  document.getElementById('l-mHeroSub').textContent = lang.mHeroSub;
+  document.getElementById('l-mainTitle').textContent = lang.mainTitle;
+  document.getElementById('l-mainSub').textContent = lang.mainSub;
+  document.getElementById('l-secRoute').textContent = lang.secRoute;
+  
+  // Input Placeholders
+  document.getElementById('startIn').placeholder = lang.startPlaceholder;
+  document.getElementById('endIn').placeholder = lang.endPlaceholder;
+  
+  document.getElementById('l-walkLabel').textContent = lang.walkLabel;
+  document.getElementById('l-walkUnit').textContent = lang.walkUnit;
+  document.getElementById('l-countLabel').textContent = lang.countLabel;
+  document.getElementById('l-countUnit').textContent = lang.countUnit;
+  
+  document.getElementById('l-secFilter').textContent = lang.secFilter;
+  document.getElementById('l-fHeaderTitle').textContent = lang.fHeaderTitle;
+  document.getElementById('l-fHeaderSub').textContent = lang.fHeaderSub;
+  
+  document.getElementById('l-f1Main').textContent = lang.f1Main;
+  document.getElementById('l-f1Badge').textContent = lang.f1Badge;
+  document.getElementById('l-f1Setting').textContent = lang.f1Setting;
+  document.getElementById('l-f1Unit').textContent = lang.f1Unit;
+  
+  document.getElementById('l-f2Main').textContent = lang.f2Main;
+  document.getElementById('l-f2Badge').textContent = lang.f2Badge;
+  document.getElementById('l-f2Setting').textContent = lang.f2Setting;
+  
+  document.getElementById('l-searchBtnText').textContent = lang.searchBtnText;
+  
+  // 重新渲染帶有動態數值的文本
+  updateDynamicFilterLabels();
+
+  // Modals
+  document.getElementById('l-modalTitle').textContent = lang.modalTitle;
+  document.getElementById('l-modalSub').textContent = lang.modalSub;
+  document.getElementById('l-modalGbtn').textContent = lang.modalGbtn;
+  document.getElementById('l-modalFeatureTitle').textContent = lang.modalFeatureTitle;
+  document.getElementById('l-mb1T').textContent = lang.mb1T;
+  document.getElementById('l-mb1S').textContent = lang.mb1S;
+  document.getElementById('l-mb2T').textContent = lang.mb2T;
+  document.getElementById('l-mb2S').textContent = lang.mb2S;
+  document.getElementById('l-mb3T').textContent = lang.mb3T;
+  document.getElementById('l-mb3S').textContent = lang.mb3S;
+  document.getElementById('l-modalNote').innerHTML = lang.modalNote;
+  
+  // User Badge if logged in
+  if(document.getElementById('ubadge').classList.contains('on')) {
+    document.getElementById('uname').textContent = currentLang === 'zh' ? '王小明' : 'John Doe';
+    document.getElementById('uav').textContent = currentLang === 'zh' ? '王' : 'J';
+  }
+}
+
+function updateDynamicFilterLabels() {
+  const lang = i18n[currentLang];
+  document.getElementById('l-f1Desc').innerHTML = `${lang.f1DescPre}<b id="minL">${minV}</b>${lang.f1DescSuf}`;
+  document.getElementById('l-f2Desc').innerHTML = `${lang.f2DescPre}<b id="maxL">${maxV}</b>${lang.f2DescSuf}`;
+}
+
+// 覆蓋原本的 adjT 來確保切換語言時數值連動正確
+const originalAdjT = adjT;
+adjT = function(k, d) {
+  originalAdjT(k, d);
+  updateDynamicFilterLabels();
+}
+
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
+</script>
+</body>
+</html>
