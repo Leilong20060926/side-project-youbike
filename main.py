@@ -10,7 +10,7 @@ app = Flask(__name__)
 # ==========================================
 
 def fetch_tdx_station_data():
-    """取得 TDX YouBike 站點基本資料"""
+    """取得 TDX YouBike 站點基本資料a"""
     print("[後端日誌] 呼叫 TDX API 取得站點資訊...")
 
     # TODO: 這裡實際串接 TDX API
@@ -72,7 +72,7 @@ def merge_tdx_data(stations, availability):
 
 
 def filter_stations(stations, people_count, require_real_time):
-    """依據人數與即時車位預測過濾站點a"""
+    """依據人數與即時車位預測過濾站點"""
     filtered = []
 
     for station in stations:
