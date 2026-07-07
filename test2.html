@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YouBike 智慧路線查詢</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* ═══════════════════════════════════
     THEME CHANGER & VARIABLE BASES
@@ -731,7 +732,7 @@ body {
           <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
           <span id="l-loginText">Google 帳號登入</span>
         </button>
-        <div class="ubadge" id="ubadge">
+        <div class="ubadge" id="ubadge" onclick="doLogout()" title="點擊登出" style="cursor:pointer;">
           <div class="uav" id="uav">U</div>
           <span class="uname" id="uname">使用者</span>
         </div>
@@ -937,7 +938,11 @@ body {
       <p id="l-modalSub">儲存常用路線・取得個人化推薦</p>
     </div>
     <div class="modal-body">
-      <button class="gbtn" onclick="doLogin()">
+      <!-- Google 官方渲染的按鈕：比 One Tap prompt() 穩定很多，
+           不會因為瀏覽器封鎖第三方 Cookie / FedCM 條件不符而整個不顯示。
+           doLogin() 的 One Tap 仍保留，兩者同時掛，哪個先觸發都能完成登入。 -->
+      <div id="gsiButtonContainer" style="display:flex; justify-content:center; min-height:44px;"></div>
+      <button class="gbtn" id="gbtnFallback" onclick="doLogin()" style="display:none;">
         <svg width="19" height="19" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         <span id="l-modalGbtn">以 Google 帳號繼續</span>
       </button>
@@ -1091,6 +1096,108 @@ const i18n = {
     dashMaxSlopeText: "Max Slope "
   }
 };
+
+let GOOGLE_CLIENT_ID = '424327968016-1p0rlo8hdl5skgrn8su81fsqog3qcccs.apps.googleusercontent.com';
+
+async function loadGoogleConfig() {
+  try {
+    const res = await fetch('/api/google-config');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.client_id) {
+      GOOGLE_CLIENT_ID = data.client_id;
+    }
+  } catch (e) {
+    console.warn('Google config load failed:', e);
+  }
+}
+
+function initGoogleLogin() {
+  if (!window.google?.accounts?.id) return;
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleCredentialResponse,
+    auto_select: false,
+    cancel_on_tap_outside: true
+  });
+
+  // 官方渲染按鈕：這個不吃 One Tap 的顯示條件限制，是最可靠的登入入口。
+  const container = document.getElementById('gsiButtonContainer');
+  if (container) {
+    container.innerHTML = '';
+    try {
+      google.accounts.id.renderButton(container, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'pill',
+        width: 280
+      });
+    } catch (e) {
+      console.warn('renderButton failed, showing fallback button:', e);
+      const fallback = document.getElementById('gbtnFallback');
+      if (fallback) fallback.style.display = 'flex';
+    }
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  if (!response?.credential) return;
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ credential: response.credential })
+    });
+    const data = await res.json();
+    if (!res.ok || data.status !== 'success') {
+      throw new Error(data.message || '後端驗證失敗');
+    }
+    applyLoggedInUser(data.user);
+    closeModal();
+    showToast(i18n[currentLang].toastLogin);
+  } catch (e) {
+    console.warn('Google login failed:', e);
+    showToast('Google 登入失敗，請稍後再試。', '#ef4444');
+  }
+}
+
+function applyLoggedInUser(user) {
+  const name = user?.name || 'Google User';
+  const initial = (name || 'G').charAt(0).toUpperCase();
+  document.getElementById('loginBtn').style.display = 'none';
+  document.getElementById('ubadge').classList.add('on');
+  document.getElementById('uname').textContent = name;
+  document.getElementById('uav').textContent = initial;
+}
+
+// 頁面載入時檢查後端 session 是否還有效（例如重新整理、下次回訪），
+// 有效的話就自動恢復登入狀態，不用每次都重新登入。
+async function checkExistingSession() {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.status === 'success' && data.user) {
+      applyLoggedInUser(data.user);
+    }
+  } catch (e) {
+    console.warn('Session check failed:', e);
+  }
+}
+
+async function doLogout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  } catch (e) {
+    console.warn('Logout request failed:', e);
+  }
+  document.getElementById('ubadge').classList.remove('on');
+  document.getElementById('loginBtn').style.display = 'flex';
+  showToast(currentLang === 'zh' ? '已登出' : 'Logged out');
+}
 
 function selectBikeType(type) {
   selectedBike = type;
@@ -1270,19 +1377,33 @@ function showToast(msg, col) {
   setTimeout(()=>t.classList.remove('on'), 3000);
 }
 
-function openModal()  { document.getElementById('overlay').classList.add('on'); }
+async function openModal() {
+  document.getElementById('overlay').classList.add('on');
+  try {
+    await loadGoogleConfig();
+    initGoogleLogin();
+  } catch (e) {
+    console.warn('Google login init failed:', e);
+    const fallback = document.getElementById('gbtnFallback');
+    if (fallback) fallback.style.display = 'flex';
+  }
+}
 function closeModal() { document.getElementById('overlay').classList.remove('on'); }
 function closeOuter(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
 
 function doLogin() {
-  closeModal();
-  setTimeout(()=>{
-    document.getElementById('loginBtn').style.display='none';
-    document.getElementById('ubadge').classList.add('on');
-    document.getElementById('uname').textContent = currentLang === 'zh' ? '王小明' : 'John Doe';
-    document.getElementById('uav').textContent = currentLang === 'zh' ? '王' : 'J';
-    showToast(i18n[currentLang].toastLogin);
-  }, 350);
+  if (window.google?.accounts?.id) {
+    google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // One Tap 沒顯示很常見（被瀏覽器策略擋掉、之前關過進冷卻期等），
+        // 這時 modal 裡的官方渲染按鈕（gsiButtonContainer）還是可以正常點擊登入，
+        // 所以這裡只是提示，不視為錯誤。
+        showToast('請改用彈窗中的 Google 按鈕登入。', '#f59e0b');
+      }
+    });
+  } else {
+    showToast('Google 登入初始化失敗，請稍後再試。', '#ef4444');
+  }
 }
 
 function toggleTheme() {
@@ -1410,6 +1531,7 @@ adjT = function(k, d) {
 }
 
 document.head.insertAdjacentHTML('beforeend','<style>@keyframes spin{to{transform:rotate(360deg)}}</style>');
+checkExistingSession();
 </script>
 </body>
 </html>
