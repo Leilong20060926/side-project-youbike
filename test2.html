@@ -1156,6 +1156,7 @@ async function handleGoogleCredentialResponse(response) {
       throw new Error(data.message || '後端驗證失敗');
     }
     applyLoggedInUser(data.user);
+    await loadProgressData();
     closeModal();
     showToast(i18n[currentLang].toastLogin);
   } catch (e) {
@@ -1173,6 +1174,90 @@ function applyLoggedInUser(user) {
   document.getElementById('uav').textContent = initial;
 }
 
+function collectProgressData() {
+  return {
+    start: document.getElementById('startIn').value.trim(),
+    end: document.getElementById('endIn').value.trim(),
+    walk: document.getElementById('walkIn').value,
+    people: document.getElementById('persIn').value,
+    bike: selectedBike,
+    minV,
+    maxV,
+  };
+}
+
+function applyProgress(progress) {
+  if (!progress) return;
+  if (progress.start) document.getElementById('startIn').value = progress.start;
+  if (progress.end) document.getElementById('endIn').value = progress.end;
+  if (progress.walk) document.getElementById('walkIn').value = progress.walk;
+  if (progress.people) document.getElementById('persIn').value = progress.people;
+  if (progress.bike) selectBikeType(progress.bike);
+  if (typeof progress.minV !== 'undefined') {
+    minV = Number(progress.minV);
+    document.getElementById('minV').textContent = minV;
+    document.getElementById('minL').textContent = minV;
+  }
+  if (typeof progress.maxV !== 'undefined') {
+    maxV = Number(progress.maxV);
+    document.getElementById('maxV').textContent = maxV;
+    document.getElementById('maxL').textContent = maxV;
+  }
+  updateDynamicFilterLabels();
+}
+
+async function saveProgressData() {
+  if (!document.getElementById('ubadge').classList.contains('on')) return false;
+  try {
+    const res = await fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ progress: collectProgressData() }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('Save progress failed:', err);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn('Save progress failed:', e);
+    return false;
+  }
+}
+
+async function loadProgressData() {
+  try {
+    const res = await fetch('/api/progress', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.status === 'success' && data.progress) {
+      applyProgress(data.progress);
+    }
+  } catch (e) {
+    console.warn('Load progress failed:', e);
+  }
+}
+
+function resetProgressForm() {
+  document.getElementById('startIn').value = '';
+  document.getElementById('endIn').value = '';
+  document.getElementById('walkIn').value = 10;
+  document.getElementById('persIn').value = 1;
+  selectedBike = 'all';
+  document.querySelectorAll('.bike-option').forEach(opt => opt.classList.remove('active'));
+  const defaultBike = document.querySelector('.bike-option[data-type="all"]');
+  if (defaultBike) defaultBike.classList.add('active');
+  minV = 3;
+  maxV = 80;
+  document.getElementById('minV').textContent = minV;
+  document.getElementById('minL').textContent = minV;
+  document.getElementById('maxV').textContent = maxV;
+  document.getElementById('maxL').textContent = maxV;
+  updateDynamicFilterLabels();
+}
+
 // 頁面載入時檢查後端 session 是否還有效（例如重新整理、下次回訪），
 // 有效的話就自動恢復登入狀態，不用每次都重新登入。
 async function checkExistingSession() {
@@ -1182,6 +1267,7 @@ async function checkExistingSession() {
     const data = await res.json();
     if (data.status === 'success' && data.user) {
       applyLoggedInUser(data.user);
+      await loadProgressData();
     }
   } catch (e) {
     console.warn('Session check failed:', e);
@@ -1190,12 +1276,19 @@ async function checkExistingSession() {
 
 async function doLogout() {
   try {
+    await saveProgressData();
+  } catch (e) {
+    console.warn('Save before logout failed:', e);
+  }
+
+  try {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
   } catch (e) {
     console.warn('Logout request failed:', e);
   }
   document.getElementById('ubadge').classList.remove('on');
   document.getElementById('loginBtn').style.display = 'flex';
+  resetProgressForm();
   showToast(currentLang === 'zh' ? '已登出' : 'Logged out');
 }
 
@@ -1275,7 +1368,7 @@ function doSearch() {
   btn.disabled = true;
   btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> <span id="l-searchBtnText">${lang.searchLoading}</span>`;
   
-  setTimeout(() => {
+  setTimeout(async () => {
     btn.disabled = false;
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> <span id="l-searchBtnText">${lang.searchBtnText}</span>`;
     
@@ -1286,6 +1379,8 @@ function doSearch() {
     } else {
       showToast(lang.toastSuccessAll);
     }
+
+    await saveProgressData();
 
     // 【新增過渡邏輯】：隱藏輸入表單區塊，秀出左右分欄儀表板
     document.getElementById('search-view-wrapper').style.display = 'none';

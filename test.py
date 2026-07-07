@@ -1,11 +1,14 @@
+import json
 import os
 import secrets
+import sqlite3
 
 from flask import Flask, request, jsonify, send_from_directory, session
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'user_progress.db')
 
 app = Flask(__name__)
 
@@ -18,11 +21,63 @@ GOOGLE_CLIENT_ID = os.getenv(
     "424327968016-1p0rlo8hdl5skgrn8su81fsqog3qcccs.apps.googleusercontent.com",
 )
 
-# Demo 用的記憶體儲存區：用 Google sub (使用者唯一 ID) 當 key 存進度。
-# 正式環境請換成資料庫（SQLite/Postgres/Firestore...），process 重啟資料就會消失。
-USER_PROGRESS_STORE = {}
-
 google_request_adapter = google_requests.Request()
+
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db_connection()
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS user_progress (
+            sub TEXT PRIMARY KEY,
+            email TEXT,
+            name TEXT,
+            picture TEXT,
+            progress TEXT
+        )
+        '''
+    )
+    conn.commit()
+    conn.close()
+
+
+def save_user_progress(user, progress):
+    conn = get_db_connection()
+    conn.execute(
+        '''
+        INSERT INTO user_progress (sub, email, name, picture, progress)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(sub) DO UPDATE SET
+            email=excluded.email,
+            name=excluded.name,
+            picture=excluded.picture,
+            progress=excluded.progress
+        ''',
+        (user['sub'], user.get('email'), user.get('name'), user.get('picture'), json.dumps(progress or {})),
+    )
+    conn.commit()
+    conn.close()
+
+
+def load_user_progress(user):
+    conn = get_db_connection()
+    row = conn.execute(
+        'SELECT progress FROM user_progress WHERE sub = ?',
+        (user['sub'],),
+    ).fetchone()
+    conn.close()
+    if not row or not row['progress']:
+        return None
+    try:
+        return json.loads(row['progress'])
+    except json.JSONDecodeError:
+        return None
 
 
 def fetch_tdx_station_data():
@@ -161,7 +216,7 @@ def api_progress_get():
     user = session.get('user')
     if not user:
         return jsonify({"status": "error", "message": "未登入"}), 401
-    progress = USER_PROGRESS_STORE.get(user['sub'])
+    progress = load_user_progress(user)
     return jsonify({"status": "success", "progress": progress})
 
 
@@ -171,7 +226,7 @@ def api_progress_save():
     if not user:
         return jsonify({"status": "error", "message": "未登入"}), 401
     data = request.get_json(silent=True) or {}
-    USER_PROGRESS_STORE[user['sub']] = data.get('progress')
+    save_user_progress(user, data.get('progress'))
     return jsonify({"status": "success"})
 
 
@@ -200,4 +255,5 @@ def api_search():
 
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
